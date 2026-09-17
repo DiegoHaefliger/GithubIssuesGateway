@@ -30,6 +30,9 @@ public class FingerprintEntity {
     @Column(name = "rule_id")
     private String ruleId;
 
+    @Column(name = "severity", length = 32)
+    private String severity;
+
     @Column(name = "card_ref")
     private String cardRef;
 
@@ -57,12 +60,13 @@ public class FingerprintEntity {
     }
 
     public FingerprintEntity(String fingerprint, String service, String env, String projeto,
-                             String ruleId, Instant occurredAt) {
+                             String ruleId, String severity, Instant occurredAt) {
         this.fingerprint = fingerprint;
         this.service = service;
         this.env = env;
         this.projeto = projeto;
         this.ruleId = ruleId;
+        this.severity = severity;
         this.occurrenceCount = 1;
         this.firstSeen = occurredAt;
         this.lastSeen = occurredAt;
@@ -108,6 +112,10 @@ public class FingerprintEntity {
 
     public String getRuleId() {
         return ruleId;
+    }
+
+    public String getSeverity() {
+        return severity;
     }
 
     public String getCardRef() {

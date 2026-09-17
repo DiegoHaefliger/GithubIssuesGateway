@@ -228,7 +228,7 @@ class DefaultAlertIngestServiceTest {
     }
 
     private FingerprintEntity existente(FingerprintState estado) {
-        FingerprintEntity entity = new FingerprintEntity("f1", "trade-backend", "producao", "trade", "r1", AGORA);
+        FingerprintEntity entity = new FingerprintEntity("f1", "trade-backend", "producao", "trade", "r1", "critical", AGORA);
         entity.vincularCard("acme/trade#123");
         entity.mudarEstado(estado);
         return entity;

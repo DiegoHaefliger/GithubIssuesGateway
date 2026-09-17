@@ -72,6 +72,6 @@ class FingerprintRepositoryTest {
     }
 
     private FingerprintEntity novo(String fingerprint) {
-        return new FingerprintEntity(fingerprint, "trade-backend", "producao", "trade", "regra-1", AGORA);
+        return new FingerprintEntity(fingerprint, "trade-backend", "producao", "trade", "regra-1", "critical", AGORA);
     }
 }

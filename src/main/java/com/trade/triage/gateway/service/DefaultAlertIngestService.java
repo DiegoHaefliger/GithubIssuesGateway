@@ -138,7 +138,7 @@ public class DefaultAlertIngestService implements AlertIngestService {
 
     private IngestResult abrirCard(ErrorSignal signal, ProjectEntry projeto, String fingerprint) {
         FingerprintEntity estado = new FingerprintEntity(fingerprint, signal.service(), signal.env(),
-                projeto.projeto(), signal.ruleId(), momento(signal));
+                projeto.projeto(), signal.ruleId(), signal.severity(), momento(signal));
 
         EvidencePackage evidencia = evidenceCollector.collect(signal, projeto, fingerprint);
         String evidenciaUri = evidenceStore.store(evidencia);

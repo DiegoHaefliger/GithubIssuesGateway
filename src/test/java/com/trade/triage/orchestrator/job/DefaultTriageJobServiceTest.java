@@ -160,7 +160,7 @@ class DefaultTriageJobServiceTest {
     }
 
     private FingerprintEntity fingerprint() {
-        FingerprintEntity entity = new FingerprintEntity("f1", "trade-backend", "producao", "trade", "r1", AGORA);
+        FingerprintEntity entity = new FingerprintEntity("f1", "trade-backend", "producao", "trade", "r1", "critical", AGORA);
         entity.vincularCard(CARD);
         return entity;
     }
