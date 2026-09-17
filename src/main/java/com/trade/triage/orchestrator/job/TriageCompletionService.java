@@ -108,6 +108,8 @@ public class TriageCompletionService {
 
         CardRef card = CardRef.parse(job.getCardRef());
         board.comentar(card, commentBuilder.build(resultado, decisao));
+        metrics.registrarTempoAteAnalise(job.getProjeto(),
+                java.time.Duration.between(estado.getFirstSeen(), clock.instant()));
 
         DecisionRecordEntity registro = registrar(job, estado, fatos, decisao);
         if (decisao.decisao() == Decision.HUMAN || !resultado.temProposta()) {

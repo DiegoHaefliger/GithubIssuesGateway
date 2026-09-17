@@ -2,6 +2,8 @@ package com.trade.triage.orchestrator.job;
 
 import com.trade.triage.board.model.CardRef;
 import com.trade.triage.gateway.service.StormWindow;
+import com.trade.triage.metrics.TriageMetrics;
+import com.trade.triage.orchestrator.runner.RunnerUsage;
 import com.trade.triage.persistence.entity.FingerprintEntity;
 import com.trade.triage.persistence.entity.JobState;
 import com.trade.triage.persistence.entity.TriageJobEntity;
@@ -32,6 +34,8 @@ public class DefaultTriageJobService implements TriageJobService {
     private final FingerprintRepository fingerprintRepository;
     private final ProjectRegistry registry;
     private final KillSwitch killSwitch;
+    private final RunnerUsage runnerUsage;
+    private final TriageMetrics metrics;
     private final OrchestratorProperties properties;
     private final Clock clock;
 
@@ -39,12 +43,16 @@ public class DefaultTriageJobService implements TriageJobService {
                                    FingerprintRepository fingerprintRepository,
                                    ProjectRegistry registry,
                                    KillSwitch killSwitch,
+                                   RunnerUsage runnerUsage,
+                                   TriageMetrics metrics,
                                    OrchestratorProperties properties,
                                    Clock clock) {
         this.jobRepository = jobRepository;
         this.fingerprintRepository = fingerprintRepository;
         this.registry = registry;
         this.killSwitch = killSwitch;
+        this.runnerUsage = runnerUsage;
+        this.metrics = metrics;
         this.properties = properties;
         this.clock = clock;
     }
@@ -94,6 +102,7 @@ public class DefaultTriageJobService implements TriageJobService {
         }
         job.transicionar(JobState.PRONTO, clock.instant());
         jobRepository.save(job);
+        registrarConsumo(job);
     }
 
     @Override
@@ -106,6 +115,12 @@ public class DefaultTriageJobService implements TriageJobService {
         }
         job.transicionar(JobState.FALHOU, clock.instant(), motivo);
         jobRepository.save(job);
+        registrarConsumo(job);
+    }
+
+    private void registrarConsumo(TriageJobEntity job) {
+        runnerUsage.tempoFaturavel(job)
+                .ifPresent(duracao -> metrics.registrarConsumoDoRunner(job.getProjeto(), duracao));
     }
 
     private TriageJobEntity buscar(String jobId) {

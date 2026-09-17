@@ -1,5 +1,6 @@
 package com.trade.triage.orchestrator.job;
 
+import com.trade.triage.metrics.TriageMetrics;
 import com.trade.triage.orchestrator.runner.RunnerDispatcher;
 import com.trade.triage.persistence.entity.JobState;
 import com.trade.triage.persistence.entity.TriageJobEntity;
@@ -28,6 +29,7 @@ public class JobWorker {
     private final ProjectRegistry registry;
     private final RunnerDispatcher dispatcher;
     private final KillSwitch killSwitch;
+    private final TriageMetrics metrics;
     private final OrchestratorProperties properties;
     private final Clock clock;
 
@@ -35,12 +37,14 @@ public class JobWorker {
                      ProjectRegistry registry,
                      RunnerDispatcher dispatcher,
                      KillSwitch killSwitch,
+                     TriageMetrics metrics,
                      OrchestratorProperties properties,
                      Clock clock) {
         this.repository = repository;
         this.registry = registry;
         this.dispatcher = dispatcher;
         this.killSwitch = killSwitch;
+        this.metrics = metrics;
         this.properties = properties;
         this.clock = clock;
     }
@@ -78,6 +82,7 @@ public class JobWorker {
             job.registrarRunner(runnerRef);
             job.transicionar(JobState.EXECUTANDO, clock.instant());
             repository.save(job);
+            metrics.contarExecucaoDoRunner(job.getProjeto());
             return true;
         } catch (RuntimeException exception) {
             LOG.error("falha ao disparar runner job={} motivo={}", job.getJobId(), exception.getMessage());

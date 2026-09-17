@@ -9,6 +9,7 @@ import com.trade.triage.persistence.repository.FingerprintRepository;
 import com.trade.triage.persistence.repository.TriageJobRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -65,6 +66,34 @@ public class TriageMetrics {
                 .tag("decisao", decisao.name())
                 .register(meterRegistry)
                 .increment();
+    }
+
+    public void contarFalsoPositivo(String ruleId) {
+        Counter.builder("triagem.falsos_positivos")
+                .tag("rule_id", ruleId == null || ruleId.isBlank() ? "desconhecido" : ruleId)
+                .register(meterRegistry)
+                .increment();
+    }
+
+    public void contarExecucaoDoRunner(String projeto) {
+        Counter.builder("triagem.execucoes_do_runner").tag("projeto", projeto)
+                .register(meterRegistry).increment();
+    }
+
+    public void registrarTempoAteAnalise(String projeto, Duration tempo) {
+        Timer.builder("triagem.tempo_ate_analise").tag("projeto", projeto)
+                .register(meterRegistry).record(tempo);
+    }
+
+    public void registrarMttr(String severidade, Duration tempo) {
+        Timer.builder("triagem.mttr")
+                .tag("severidade", severidade == null || severidade.isBlank() ? "desconhecida" : severidade)
+                .register(meterRegistry).record(tempo);
+    }
+
+    public void registrarConsumoDoRunner(String projeto, Duration duracao) {
+        Timer.builder("triagem.minutos_de_actions").tag("projeto", projeto)
+                .register(meterRegistry).record(duracao);
     }
 
     private void registrarMedidores() {

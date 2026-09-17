@@ -5,6 +5,8 @@ import com.trade.triage.persistence.entity.JobState;
 import com.trade.triage.persistence.entity.TriageJobEntity;
 import com.trade.triage.persistence.repository.FingerprintRepository;
 import com.trade.triage.persistence.repository.TriageJobRepository;
+import com.trade.triage.metrics.TriageMetrics;
+import com.trade.triage.orchestrator.runner.RunnerUsage;
 import com.trade.triage.registry.ProjectRegistry;
 import com.trade.triage.registry.model.ProjectEntry;
 import com.trade.triage.registry.model.ProjectLimits;
@@ -51,6 +53,10 @@ class DefaultTriageJobServiceTest {
     private FingerprintRepository fingerprintRepository;
     @Mock
     private ProjectRegistry registry;
+    @Mock
+    private RunnerUsage runnerUsage;
+    @Mock
+    private TriageMetrics metrics;
 
     private DefaultTriageJobService service;
 
@@ -114,6 +120,18 @@ class DefaultTriageJobServiceTest {
     }
 
     @Test
+    void registraOsMinutosDeActionsQuandoORunnerTermina() {
+        TriageJobEntity job = job(JobState.EXECUTANDO);
+        job.registrarExecucaoDoRunner(4242L);
+        when(jobRepository.findById("job-1")).thenReturn(Optional.of(job));
+        when(runnerUsage.tempoFaturavel(job)).thenReturn(Optional.of(Duration.ofMinutes(7)));
+
+        service.marcarPronto("job-1");
+
+        verify(metrics).registrarConsumoDoRunner("trade", Duration.ofMinutes(7));
+    }
+
+    @Test
     void sinalDeConclusaoLevaJobDeExecutandoParaPronto() {
         TriageJobEntity job = job(JobState.EXECUTANDO);
         when(jobRepository.findById("job-1")).thenReturn(Optional.of(job));
@@ -155,6 +173,7 @@ class DefaultTriageJobServiceTest {
 
     private DefaultTriageJobService criar(KillSwitch killSwitch) {
         return new DefaultTriageJobService(jobRepository, fingerprintRepository, registry, killSwitch,
+                runnerUsage, metrics,
                 new OrchestratorProperties(2, Duration.ofMinutes(30), "https://triagem.interno"),
                 Clock.fixed(AGORA, ZoneOffset.UTC));
     }

@@ -12,6 +12,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -29,13 +31,16 @@ public class DefaultOutcomeService implements OutcomeService {
     private final DecisionRecordRepository decisionRepository;
     private final FingerprintRepository fingerprintRepository;
     private final TriageMetrics metrics;
+    private final Clock clock;
 
     public DefaultOutcomeService(DecisionRecordRepository decisionRepository,
                                  FingerprintRepository fingerprintRepository,
-                                 TriageMetrics metrics) {
+                                 TriageMetrics metrics,
+                                 Clock clock) {
         this.decisionRepository = decisionRepository;
         this.fingerprintRepository = fingerprintRepository;
         this.metrics = metrics;
+        this.clock = clock;
     }
 
     @Override
@@ -56,6 +61,7 @@ public class DefaultOutcomeService implements OutcomeService {
 
         if (merged) {
             marcarFingerprint(decisao.getFingerprint(), FingerprintState.RESOLVIDO);
+            fingerprintRepository.findById(decisao.getFingerprint()).ifPresent(this::registrarMttr);
         }
         LOG.info("desfecho registrado pr={} desfecho={}", prRef, desfecho);
     }
@@ -66,6 +72,10 @@ public class DefaultOutcomeService implements OutcomeService {
         fingerprintRepository.findByCardRef(cardRef).ifPresent(estado -> {
             estado.mudarEstado(FingerprintState.RESOLVIDO);
             fingerprintRepository.save(estado);
+            registrarMttr(estado);
+            if (decisionRepository.findByFingerprint(estado.getFingerprint()).isEmpty()) {
+                metrics.contarFalsoPositivo(estado.getRuleId());
+            }
             LOG.info("card fechado, fingerprint resolvido card={} fingerprint={}",
                     cardRef, estado.getFingerprint());
         });
@@ -93,6 +103,10 @@ public class DefaultOutcomeService implements OutcomeService {
         if (!merged.isEmpty()) {
             marcarFingerprint(fingerprint, FingerprintState.AGUARDANDO_HUMANO);
         }
+    }
+
+    private void registrarMttr(FingerprintEntity estado) {
+        metrics.registrarMttr(estado.getSeverity(), Duration.between(estado.getFirstSeen(), clock.instant()));
     }
 
     private void marcarFingerprint(String fingerprint, FingerprintState estado) {

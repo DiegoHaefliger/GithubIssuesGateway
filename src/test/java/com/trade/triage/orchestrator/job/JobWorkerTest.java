@@ -1,5 +1,6 @@
 package com.trade.triage.orchestrator.job;
 
+import com.trade.triage.metrics.TriageMetrics;
 import com.trade.triage.orchestrator.runner.RunnerDispatcher;
 import com.trade.triage.persistence.entity.JobState;
 import com.trade.triage.persistence.entity.TriageJobEntity;
@@ -48,6 +49,8 @@ class JobWorkerTest {
     private ProjectRegistry registry;
     @Mock
     private RunnerDispatcher dispatcher;
+    @Mock
+    private TriageMetrics metrics;
 
     private JobWorker worker;
 
@@ -134,7 +137,7 @@ class JobWorkerTest {
 
     private JobWorker criar(KillSwitch killSwitch) {
         lenient().when(repository.countByStateIn(anyList())).thenReturn(0L);
-        return new JobWorker(repository, registry, dispatcher, killSwitch,
+        return new JobWorker(repository, registry, dispatcher, killSwitch, metrics,
                 new OrchestratorProperties(2, Duration.ofMinutes(30), "https://triagem.interno"),
                 Clock.fixed(AGORA, ZoneOffset.UTC));
     }

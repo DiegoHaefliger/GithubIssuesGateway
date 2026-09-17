@@ -80,6 +80,54 @@ class TriageMetricsTest {
         assertThat(meterRegistry.get("triagem.jobs.ativos").gauge().value()).isEqualTo(2);
     }
 
+    @Test
+    void registraTempoAteAnaliseComoTimer() {
+        metrics().registrarTempoAteAnalise("trade", java.time.Duration.ofMinutes(4));
+
+        assertThat(meterRegistry.get("triagem.tempo_ate_analise").tag("projeto", "trade")
+                .timer().count()).isEqualTo(1);
+    }
+
+    @Test
+    void registraMttrPorSeveridade() {
+        metrics().registrarMttr("critical", java.time.Duration.ofHours(6));
+
+        assertThat(meterRegistry.get("triagem.mttr").tag("severidade", "critical")
+                .timer().count()).isEqualTo(1);
+    }
+
+    @Test
+    void registraMinutosDeActions() {
+        metrics().registrarConsumoDoRunner("trade", java.time.Duration.ofMinutes(7));
+
+        assertThat(meterRegistry.get("triagem.minutos_de_actions").tag("projeto", "trade")
+                .timer().totalTime(java.util.concurrent.TimeUnit.MINUTES)).isEqualTo(7);
+    }
+
+    @Test
+    void contaFalsoPositivoPorRegra() {
+        metrics().contarFalsoPositivo("regra-1");
+
+        assertThat(meterRegistry.get("triagem.falsos_positivos").tag("rule_id", "regra-1")
+                .counter().count()).isEqualTo(1);
+    }
+
+    @Test
+    void falsoPositivoSemRegraCaiEmDesconhecido() {
+        metrics().contarFalsoPositivo(null);
+
+        assertThat(meterRegistry.get("triagem.falsos_positivos").tag("rule_id", "desconhecido")
+                .counter().count()).isEqualTo(1);
+    }
+
+    @Test
+    void contaDesfechoPorDecisao() {
+        metrics().contarDesfecho(com.trade.triage.persistence.entity.Outcome.MERGED, Decision.AUTO_FIX);
+
+        assertThat(meterRegistry.get("triagem.desfechos")
+                .tag("desfecho", "MERGED").tag("decisao", "AUTO_FIX").counter().count()).isEqualTo(1);
+    }
+
     private TriageMetrics metrics() {
         return new TriageMetrics(fingerprintRepository, jobRepository, decisionRepository, meterRegistry,
                 Clock.fixed(AGORA, ZoneOffset.UTC));

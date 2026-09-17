@@ -42,7 +42,8 @@ class DefaultOutcomeServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DefaultOutcomeService(decisionRepository, fingerprintRepository, metrics);
+        service = new DefaultOutcomeService(decisionRepository, fingerprintRepository, metrics,
+                java.time.Clock.fixed(AGORA.plus(java.time.Duration.ofHours(3)), java.time.ZoneOffset.UTC));
     }
 
     @Test
@@ -95,10 +96,34 @@ class DefaultOutcomeServiceTest {
     void cardFechadoResolveFingerprint() {
         FingerprintEntity estado = fingerprint();
         when(fingerprintRepository.findByCardRef("acme/trade#123")).thenReturn(Optional.of(estado));
+        when(decisionRepository.findByFingerprint("f1")).thenReturn(List.of(decisao()));
 
         service.registrarCardFechado("acme/trade#123");
 
         assertThat(estado.getState()).isEqualTo(FingerprintState.RESOLVIDO);
+        verify(metrics).registrarMttr("critical", java.time.Duration.ofHours(3));
+    }
+
+    @Test
+    void cardFechadoSemNenhumaDecisaoContaFalsoPositivo() {
+        FingerprintEntity estado = fingerprint();
+        when(fingerprintRepository.findByCardRef("acme/trade#123")).thenReturn(Optional.of(estado));
+        when(decisionRepository.findByFingerprint("f1")).thenReturn(List.of());
+
+        service.registrarCardFechado("acme/trade#123");
+
+        verify(metrics).contarFalsoPositivo("r1");
+    }
+
+    @Test
+    void cardFechadoComDecisaoNaoContaFalsoPositivo() {
+        FingerprintEntity estado = fingerprint();
+        when(fingerprintRepository.findByCardRef("acme/trade#123")).thenReturn(Optional.of(estado));
+        when(decisionRepository.findByFingerprint("f1")).thenReturn(List.of(decisao()));
+
+        service.registrarCardFechado("acme/trade#123");
+
+        verify(metrics, never()).contarFalsoPositivo(any());
     }
 
     @Test
