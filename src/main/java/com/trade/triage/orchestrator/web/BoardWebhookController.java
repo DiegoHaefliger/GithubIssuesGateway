@@ -31,15 +31,18 @@ public class BoardWebhookController {
     private static final String EVENTO_PUSH = "push";
 
     private final WebhookSignatureVerifier verifier;
+    private final WebhookDeduplicator deduplicator;
     private final TriageJobService jobService;
     private final OutcomeService outcomeService;
     private final ObjectMapper objectMapper;
 
     public BoardWebhookController(WebhookSignatureVerifier verifier,
+                                  WebhookDeduplicator deduplicator,
                                   TriageJobService jobService,
                                   OutcomeService outcomeService,
                                   ObjectMapper objectMapper) {
         this.verifier = verifier;
+        this.deduplicator = deduplicator;
         this.jobService = jobService;
         this.outcomeService = outcomeService;
         this.objectMapper = objectMapper;
@@ -49,9 +52,14 @@ public class BoardWebhookController {
     public ResponseEntity<JobEnqueueResult> receber(
             @RequestHeader("X-GitHub-Event") String evento,
             @RequestHeader(name = "X-Hub-Signature-256", required = false) String assinatura,
+            @RequestHeader(name = "X-GitHub-Delivery", required = false) String deliveryId,
             @RequestBody String payload) {
 
         verifier.verify(payload, assinatura);
+        if (!deduplicator.primeiraEntrega(deliveryId, evento)) {
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .body(registrado("entrega repetida descartada"));
+        }
         JsonNode corpo = ler(payload);
 
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(switch (evento) {

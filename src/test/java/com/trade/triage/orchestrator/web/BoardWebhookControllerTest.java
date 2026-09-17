@@ -57,6 +57,25 @@ class BoardWebhookControllerTest {
     @MockitoBean
     private OutcomeService outcomeService;
 
+    @MockitoBean
+    private WebhookDeduplicator deduplicator;
+
+    @org.junit.jupiter.api.BeforeEach
+    void aceitarEntregaNova() {
+        when(deduplicator.primeiraEntrega(any(), anyString())).thenReturn(true);
+    }
+
+    @Test
+    void entregaRepetidaNaoEnfileiraDeNovo() throws Exception {
+        when(deduplicator.primeiraEntrega(any(), anyString())).thenReturn(false);
+
+        mockMvc.perform(webhook("issues", LABELED))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.motivo").value("entrega repetida descartada"));
+
+        verify(jobService, never()).enfileirar(anyString(), anyString());
+    }
+
     @Test
     void labelAutoTriageEnfileiraJob() throws Exception {
         when(jobService.enfileirar("acme/trade#123", "issues.labeled"))
@@ -173,6 +192,7 @@ class BoardWebhookControllerTest {
             String evento, String payload) {
         return post("/webhooks/board")
                 .header("X-GitHub-Event", evento)
+                .header("X-GitHub-Delivery", "entrega-1")
                 .header("X-Hub-Signature-256", "sha256=qualquer")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(payload);
