@@ -1,8 +1,10 @@
 package com.trade.triage.board.github;
 
 import com.trade.triage.board.BoardClient;
+import com.trade.triage.board.model.CardComment;
 import com.trade.triage.board.model.CardContent;
 import com.trade.triage.board.model.CardRef;
+import com.trade.triage.board.model.CardSnapshot;
 import com.trade.triage.board.model.PullRequestContent;
 import com.trade.triage.board.model.PullRequestRef;
 import org.springframework.stereotype.Component;
@@ -13,6 +15,8 @@ import java.util.Map;
 
 @Component
 public class GitHubBoardClient implements BoardClient {
+
+    private static final int PAGINA_DE_COMENTARIOS = 100;
 
     private final RestClient restClient;
 
@@ -31,6 +35,36 @@ public class GitHubBoardClient implements BoardClient {
             throw new BoardOperationException("GitHub nao devolveu a issue criada em " + repositorio);
         }
         return new CardRef(repositorio, resposta.number());
+    }
+
+    @Override
+    public CardSnapshot lerCard(CardRef card) {
+        IssueDetailResponse resposta = restClient.get()
+                .uri("/repos/{owner}/{repo}/issues/{numero}",
+                        owner(card.repositorio()), nome(card.repositorio()), card.numero())
+                .retrieve()
+                .body(IssueDetailResponse.class);
+        if (resposta == null) {
+            throw new BoardOperationException("GitHub nao devolveu a issue " + card.asString());
+        }
+        return new CardSnapshot(resposta.title(), resposta.body(), resposta.state());
+    }
+
+    @Override
+    public List<CardComment> lerComentarios(CardRef card) {
+        IssueCommentResponse[] respostas = restClient.get()
+                .uri(builder -> builder.path("/repos/{owner}/{repo}/issues/{numero}/comments")
+                        .queryParam("per_page", PAGINA_DE_COMENTARIOS)
+                        .build(owner(card.repositorio()), nome(card.repositorio()), card.numero()))
+                .retrieve()
+                .body(IssueCommentResponse[].class);
+        if (respostas == null) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(respostas)
+                .map(resposta -> new CardComment(resposta.autor(), resposta.tipoDeAutor(),
+                        resposta.createdAt(), resposta.body()))
+                .toList();
     }
 
     @Override

@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.net.URI;
 import java.nio.file.StandardCopyOption;
+import java.util.Optional;
 
 @Component
 public class FileSystemEvidenceStore implements EvidenceStore {
@@ -32,6 +34,22 @@ public class FileSystemEvidenceStore implements EvidenceStore {
             return destino.toUri().toString();
         } catch (IOException exception) {
             throw new EvidenceStoreException("Falha ao gravar pacote de evidencia " + pacote.id(), exception);
+        }
+    }
+
+    @Override
+    public Optional<EvidencePackage> load(String uri) {
+        if (uri == null || uri.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            Path arquivo = Path.of(URI.create(uri));
+            return Files.exists(arquivo)
+                    ? Optional.of(objectMapper.readValue(Files.readString(arquivo, StandardCharsets.UTF_8),
+                            EvidencePackage.class))
+                    : Optional.empty();
+        } catch (IOException | IllegalArgumentException exception) {
+            throw new EvidenceStoreException("Pacote de evidencia ilegivel em " + uri, exception);
         }
     }
 
