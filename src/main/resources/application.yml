@@ -22,3 +22,11 @@ management:
 logging:
   level:
     com.trade.triage: INFO
+
+triage:
+  registry:
+    origem: ${TRIAGE_REGISTRY_ORIGEM:ARQUIVO}
+    arquivo: ${TRIAGE_REGISTRY_ARQUIVO:config/projetos.json}
+    url: ${TRIAGE_REGISTRY_URL:}
+    recarga-intervalo: ${TRIAGE_REGISTRY_RECARGA:5m}
+    timeout: ${TRIAGE_REGISTRY_TIMEOUT:10s}
