@@ -9,6 +9,7 @@ import com.trade.triage.gateway.fingerprint.FingerprintCalculator;
 import com.trade.triage.gateway.model.ErrorSignal;
 import com.trade.triage.gateway.web.GrafanaAlert;
 import com.trade.triage.gateway.web.GrafanaWebhookRequest;
+import com.trade.triage.metrics.TriageMetrics;
 import com.trade.triage.persistence.entity.FingerprintEntity;
 import com.trade.triage.persistence.entity.FingerprintState;
 import com.trade.triage.persistence.repository.FingerprintRepository;
@@ -42,6 +43,7 @@ public class DefaultAlertIngestService implements AlertIngestService {
     private final BoardClient board;
     private final KillSwitch killSwitch;
     private final IncidentWindow incidentWindow;
+    private final TriageMetrics metrics;
     private final Clock clock;
 
     public DefaultAlertIngestService(ProjectRegistry registry,
@@ -55,6 +57,7 @@ public class DefaultAlertIngestService implements AlertIngestService {
                                      BoardClient board,
                                      KillSwitch killSwitch,
                                      IncidentWindow incidentWindow,
+                                     TriageMetrics metrics,
                                      Clock clock) {
         this.registry = registry;
         this.fingerprintCalculator = fingerprintCalculator;
@@ -67,6 +70,7 @@ public class DefaultAlertIngestService implements AlertIngestService {
         this.board = board;
         this.killSwitch = killSwitch;
         this.incidentWindow = incidentWindow;
+        this.metrics = metrics;
         this.clock = clock;
     }
 
@@ -94,6 +98,7 @@ public class DefaultAlertIngestService implements AlertIngestService {
         if (projeto.isEmpty()) {
             LOG.warn("log orfao service={} env={} registro_versao={}",
                     signal.service(), signal.env(), registry.version());
+            metrics.contarLogOrfao(signal.service());
             return IngestResult.de(IngestOutcome.LOG_ORFAO,
                     "service " + signal.service() + " fora do registro de escopo");
         }
@@ -148,6 +153,7 @@ public class DefaultAlertIngestService implements AlertIngestService {
         estado.vincularCard(card.asString());
         repository.save(estado);
 
+        metrics.contarCardCriado(projeto.projeto());
         LOG.info("card criado projeto={} fingerprint={} card={}", projeto.projeto(), fingerprint, card.asString());
         return IngestResult.comCard(IngestOutcome.CARD_CRIADO, fingerprint, card.asString());
     }

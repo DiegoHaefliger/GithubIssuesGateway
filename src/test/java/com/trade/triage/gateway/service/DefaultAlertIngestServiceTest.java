@@ -13,6 +13,7 @@ import com.trade.triage.gateway.scrub.ScrubProperties;
 import com.trade.triage.gateway.scrub.SecretScrubber;
 import com.trade.triage.gateway.web.GrafanaAlert;
 import com.trade.triage.gateway.web.GrafanaWebhookRequest;
+import com.trade.triage.metrics.TriageMetrics;
 import com.trade.triage.persistence.entity.FingerprintEntity;
 import com.trade.triage.persistence.entity.FingerprintState;
 import com.trade.triage.persistence.repository.FingerprintRepository;
@@ -70,6 +71,8 @@ class DefaultAlertIngestServiceTest {
     private BoardClient board;
     @Mock
     private CardRateLimiter rateLimiter;
+    @Mock
+    private TriageMetrics metrics;
 
     private DefaultAlertIngestService service;
 
@@ -89,6 +92,7 @@ class DefaultAlertIngestServiceTest {
                 board,
                 new KillSwitch(new KillSwitchProperties("build/nao-existe", false)),
                 new IncidentWindow(new IncidentWindowProperties("build/nao-existe")),
+                metrics,
                 clock);
     }
 
@@ -190,7 +194,7 @@ class DefaultAlertIngestServiceTest {
                 new CardContentBuilder(new SecretScrubber(new ScrubProperties(null, null))), rateLimiter,
                 repository, board, new KillSwitch(new KillSwitchProperties("build/nao-existe", true)),
                 new IncidentWindow(new IncidentWindowProperties("build/nao-existe")),
-                Clock.fixed(AGORA, ZoneOffset.UTC));
+                metrics, Clock.fixed(AGORA, ZoneOffset.UTC));
 
         List<IngestResult> resultados = desligado.ingest(webhook(alerta("qualquer")));
 

@@ -7,6 +7,7 @@ import com.trade.triage.gate.GateDecision;
 import com.trade.triage.gate.GateFacts;
 import com.trade.triage.gate.PolicyGate;
 import com.trade.triage.gate.verification.GateFactsVerifier;
+import com.trade.triage.metrics.TriageMetrics;
 import com.trade.triage.orchestrator.publish.AnalysisCommentBuilder;
 import com.trade.triage.orchestrator.publish.PatchPublisher;
 import com.trade.triage.orchestrator.publish.PullRequestBodyBuilder;
@@ -81,6 +82,8 @@ class TriageCompletionServiceTest {
     private PatchPublisher patchPublisher;
     @Mock
     private BoardClient board;
+    @Mock
+    private TriageMetrics metrics;
 
     private TriageCompletionService service;
 
@@ -88,7 +91,7 @@ class TriageCompletionServiceTest {
     void setUp() {
         service = new TriageCompletionService(jobRepository, fingerprintRepository, decisionRepository,
                 registry, resultReader, verifier, gate, patchPublisher, new AnalysisCommentBuilder(),
-                new PullRequestBodyBuilder(), board, Clock.fixed(AGORA, ZoneOffset.UTC));
+                new PullRequestBodyBuilder(), board, metrics, Clock.fixed(AGORA, ZoneOffset.UTC));
         lenient().when(registry.version()).thenReturn("v1");
     }
 

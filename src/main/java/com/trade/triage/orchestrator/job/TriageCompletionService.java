@@ -8,6 +8,7 @@ import com.trade.triage.gate.GateDecision;
 import com.trade.triage.gate.GateFacts;
 import com.trade.triage.gate.PolicyGate;
 import com.trade.triage.gate.verification.GateFactsVerifier;
+import com.trade.triage.metrics.TriageMetrics;
 import com.trade.triage.orchestrator.publish.AnalysisCommentBuilder;
 import com.trade.triage.orchestrator.publish.PatchPublisher;
 import com.trade.triage.orchestrator.publish.PullRequestBodyBuilder;
@@ -50,6 +51,7 @@ public class TriageCompletionService {
     private final AnalysisCommentBuilder commentBuilder;
     private final PullRequestBodyBuilder pullRequestBuilder;
     private final BoardClient board;
+    private final TriageMetrics metrics;
     private final Clock clock;
 
     public TriageCompletionService(TriageJobRepository jobRepository,
@@ -63,6 +65,7 @@ public class TriageCompletionService {
                                    AnalysisCommentBuilder commentBuilder,
                                    PullRequestBodyBuilder pullRequestBuilder,
                                    BoardClient board,
+                                   TriageMetrics metrics,
                                    Clock clock) {
         this.jobRepository = jobRepository;
         this.fingerprintRepository = fingerprintRepository;
@@ -75,6 +78,7 @@ public class TriageCompletionService {
         this.commentBuilder = commentBuilder;
         this.pullRequestBuilder = pullRequestBuilder;
         this.board = board;
+        this.metrics = metrics;
         this.clock = clock;
     }
 
@@ -170,6 +174,7 @@ public class TriageCompletionService {
                 job.getJobId(), job.getCardRef(), job.getFingerprint(), decisao.decisao(),
                 decisao.regraDecisora(), registry.version(), fatos.arquivosDoDiff(), fatos.linhasDoDiff(),
                 fatos.testeReproduzOErro(), fatos.todosNaAllowlist(), fatos.blastRadius(), clock.instant());
+        metrics.contarDecisao(decisao.decisao(), decisao.regraDecisora());
         return decisionRepository.save(registro);
     }
 
