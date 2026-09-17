@@ -2,6 +2,7 @@ package com.trade.triage.orchestrator.job;
 
 import com.trade.triage.board.BoardClient;
 import com.trade.triage.board.model.CardRef;
+import com.trade.triage.orchestrator.runner.RunnerCanceller;
 import com.trade.triage.persistence.entity.JobState;
 import com.trade.triage.persistence.entity.TriageJobEntity;
 import com.trade.triage.persistence.repository.TriageJobRepository;
@@ -22,11 +23,14 @@ public class JobWatchdog {
     private static final String LABEL_AGUARDANDO_HUMANO = "aguardando-humano";
 
     private final TriageJobRepository repository;
+    private final RunnerCanceller canceller;
     private final BoardClient board;
     private final Clock clock;
 
-    public JobWatchdog(TriageJobRepository repository, BoardClient board, Clock clock) {
+    public JobWatchdog(TriageJobRepository repository, RunnerCanceller canceller,
+                       BoardClient board, Clock clock) {
         this.repository = repository;
+        this.canceller = canceller;
         this.board = board;
         this.clock = clock;
     }
@@ -36,11 +40,18 @@ public class JobWatchdog {
     public void expirarJobsVencidos() {
         List<TriageJobEntity> vencidos = repository.findByStateInAndPrazoBefore(ATIVOS, clock.instant());
         for (TriageJobEntity job : vencidos) {
-            job.transicionar(JobState.EXPIRADO, clock.instant(), "prazo do job estourou");
+            boolean cancelado = canceller.cancelar(job);
+            job.transicionar(JobState.EXPIRADO, clock.instant(), motivo(cancelado));
             repository.save(job);
             escalar(job);
             LOG.warn("job expirado pelo watchdog job={} card={}", job.getJobId(), job.getCardRef());
         }
+    }
+
+    private String motivo(boolean cancelado) {
+        return cancelado
+                ? "prazo do job estourou; execucao do runner cancelada"
+                : "prazo do job estourou; execucao do runner nao pode ser cancelada";
     }
 
     private void escalar(TriageJobEntity job) {

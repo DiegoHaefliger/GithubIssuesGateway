@@ -35,7 +35,7 @@ class RunnerContextControllerTest {
 
     @Test
     void entregaOContextoParaAssinaturaValida() throws Exception {
-        when(contextService.contextoDe("job-1")).thenReturn(new JobContextResponse(
+        when(contextService.contextoDe("job-1", null)).thenReturn(new JobContextResponse(
                 "job-1", "acme/trade#123", "f1", "acme/trade", "master",
                 JobContextResponse.AVISO_DE_CONTEUDO_HOSTIL, "titulo", "corpo", List.of(), null));
 
@@ -56,7 +56,7 @@ class RunnerContextControllerTest {
                         .header("X-Hub-Signature-256", "sha256=errada"))
                 .andExpect(status().isUnauthorized());
 
-        verify(contextService, never()).contextoDe(anyString());
+        verify(contextService, never()).contextoDe(anyString(), any());
     }
 
     @Test

@@ -40,6 +40,9 @@ public class TriageJobEntity {
     @Column(name = "runner_ref")
     private String runnerRef;
 
+    @Column(name = "runner_run_id")
+    private Long runnerRunId;
+
     @Column(name = "motivo")
     private String motivo;
 
@@ -90,6 +93,10 @@ public class TriageJobEntity {
         this.runnerRef = runnerRef;
     }
 
+    public void registrarExecucaoDoRunner(Long runnerRunId) {
+        this.runnerRunId = runnerRunId;
+    }
+
     public boolean vencido(Instant momento) {
         return !state.terminal() && momento.isAfter(prazo);
     }
@@ -124,6 +131,10 @@ public class TriageJobEntity {
 
     public String getRunnerRef() {
         return runnerRef;
+    }
+
+    public Long getRunnerRunId() {
+        return runnerRunId;
     }
 
     public String getMotivo() {

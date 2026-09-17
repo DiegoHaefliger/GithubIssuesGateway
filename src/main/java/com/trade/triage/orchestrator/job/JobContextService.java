@@ -4,5 +4,5 @@ import com.trade.triage.orchestrator.web.JobContextResponse;
 
 public interface JobContextService {
 
-    JobContextResponse contextoDe(String jobId);
+    JobContextResponse contextoDe(String jobId, Long runId);
 }

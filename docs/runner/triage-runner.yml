@@ -37,7 +37,7 @@ jobs:
         run: |
           assinatura="sha256=$(printf '%s' "$JOB_ID" | openssl dgst -sha256 -hmac "$SEGREDO" | awk '{print $2}')"
           curl --fail --silent --show-error \
-            "${{ inputs.callback_url }}/jobs/$JOB_ID/contexto" \
+            "${{ inputs.callback_url }}/jobs/$JOB_ID/contexto?run_id=${{ github.run_id }}" \
             -H "X-Hub-Signature-256: $assinatura" \
             -o triagem-in/contexto.json
 

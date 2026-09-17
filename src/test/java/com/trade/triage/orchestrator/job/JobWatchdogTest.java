@@ -2,6 +2,7 @@ package com.trade.triage.orchestrator.job;
 
 import com.trade.triage.board.BoardClient;
 import com.trade.triage.board.model.CardRef;
+import com.trade.triage.orchestrator.runner.RunnerCanceller;
 import com.trade.triage.persistence.entity.JobState;
 import com.trade.triage.persistence.entity.TriageJobEntity;
 import com.trade.triage.persistence.repository.TriageJobRepository;
@@ -34,6 +35,8 @@ class JobWatchdogTest {
     private TriageJobRepository repository;
     @Mock
     private BoardClient board;
+    @Mock
+    private RunnerCanceller canceller;
 
     @Test
     void expiraJobVencidoEEscalaParaHumano() {
@@ -49,6 +52,31 @@ class JobWatchdogTest {
     }
 
     @Test
+    void mataORunnerOrfaoAntesDeExpirar() {
+        TriageJobEntity job = executando();
+        job.registrarExecucaoDoRunner(4242L);
+        when(repository.findByStateInAndPrazoBefore(anyList(), any())).thenReturn(List.of(job));
+        when(canceller.cancelar(job)).thenReturn(true);
+
+        watchdog().expirarJobsVencidos();
+
+        verify(canceller).cancelar(job);
+        assertThat(job.getMotivo()).contains("cancelada");
+    }
+
+    @Test
+    void runnerQueNaoPodeSerCanceladoFicaRegistradoNoMotivo() {
+        TriageJobEntity job = executando();
+        when(repository.findByStateInAndPrazoBefore(anyList(), any())).thenReturn(List.of(job));
+        when(canceller.cancelar(job)).thenReturn(false);
+
+        watchdog().expirarJobsVencidos();
+
+        assertThat(job.getState()).isEqualTo(JobState.EXPIRADO);
+        assertThat(job.getMotivo()).contains("nao pode ser cancelada");
+    }
+
+    @Test
     void semJobVencidoNaoTocaNoBoard() {
         when(repository.findByStateInAndPrazoBefore(anyList(), any())).thenReturn(List.of());
 
@@ -58,7 +86,7 @@ class JobWatchdogTest {
     }
 
     private JobWatchdog watchdog() {
-        return new JobWatchdog(repository, board, Clock.fixed(AGORA, ZoneOffset.UTC));
+        return new JobWatchdog(repository, canceller, board, Clock.fixed(AGORA, ZoneOffset.UTC));
     }
 
     private TriageJobEntity executando() {

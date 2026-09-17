@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,9 +25,10 @@ public class RunnerContextController {
     @GetMapping("/{jobId}/contexto")
     public ResponseEntity<JobContextResponse> contexto(
             @PathVariable String jobId,
-            @RequestHeader(name = "X-Hub-Signature-256", required = false) String assinatura) {
+            @RequestHeader(name = "X-Hub-Signature-256", required = false) String assinatura,
+            @RequestParam(name = "run_id", required = false) Long runId) {
 
         verifier.verify(jobId, assinatura);
-        return ResponseEntity.ok(contextService.contextoDe(jobId));
+        return ResponseEntity.ok(contextService.contextoDe(jobId, runId));
     }
 }

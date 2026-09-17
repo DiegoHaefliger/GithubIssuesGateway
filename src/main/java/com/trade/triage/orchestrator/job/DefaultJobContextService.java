@@ -46,12 +46,16 @@ public class DefaultJobContextService implements JobContextService {
     }
 
     @Override
-    @Transactional(readOnly = true)
-    public JobContextResponse contextoDe(String jobId) {
+    @Transactional
+    public JobContextResponse contextoDe(String jobId, Long runId) {
         TriageJobEntity job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new NotFoundException("Job desconhecido: " + jobId));
         if (job.getState() != JobState.EXECUTANDO) {
             throw new UnauthorizedException("Job " + jobId + " nao esta em execucao");
+        }
+        if (runId != null) {
+            job.registrarExecucaoDoRunner(runId);
+            jobRepository.save(job);
         }
         FingerprintEntity estado = fingerprintRepository.findById(job.getFingerprint())
                 .orElseThrow(() -> new NotFoundException("Fingerprint desconhecido: " + job.getFingerprint()));
