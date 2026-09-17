@@ -30,3 +30,6 @@ triage:
     url: ${TRIAGE_REGISTRY_URL:}
     recarga-intervalo: ${TRIAGE_REGISTRY_RECARGA:5m}
     timeout: ${TRIAGE_REGISTRY_TIMEOUT:10s}
+  scrub:
+    campos-sensiveis: ${TRIAGE_SCRUB_SENSIVEIS:}
+    campos-conhecidos: ${TRIAGE_SCRUB_CONHECIDOS:}

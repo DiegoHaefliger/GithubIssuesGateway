@@ -13,6 +13,7 @@ public record ProjectEntry(
         @JsonProperty("projeto") @NotBlank String projeto,
         @JsonProperty("diretorio") @NotBlank String diretorio,
         @JsonProperty("servicos") @NotEmpty List<String> servicos,
+        @JsonProperty("pacotes_raiz") @NotEmpty List<String> pacotesRaiz,
         @JsonProperty("repositorio") @NotBlank String repositorio,
         @JsonProperty("branch_base") @NotBlank String branchBase,
         @JsonProperty("ambientes") @NotEmpty List<String> ambientes,
@@ -24,6 +25,7 @@ public record ProjectEntry(
 
     public ProjectEntry {
         servicos = servicos == null ? List.of() : List.copyOf(servicos);
+        pacotesRaiz = pacotesRaiz == null ? List.of() : List.copyOf(pacotesRaiz);
         ambientes = ambientes == null ? List.of() : List.copyOf(ambientes);
         allowlist = allowlist == null ? List.of() : List.copyOf(allowlist);
         blastRadius = blastRadius == null ? Map.of() : Map.copyOf(blastRadius);

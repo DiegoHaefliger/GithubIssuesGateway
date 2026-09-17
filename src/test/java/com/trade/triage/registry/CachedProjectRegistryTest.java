@@ -22,6 +22,7 @@ class CachedProjectRegistryTest {
                   "projeto": "trade-backend",
                   "diretorio": "/opt/projetos/trade",
                   "servicos": ["trade-backend"],
+                  "pacotes_raiz": ["com.acme.trade"],
                   "repositorio": "acme/trade",
                   "branch_base": "master",
                   "ambientes": ["producao"],
