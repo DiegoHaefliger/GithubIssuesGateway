@@ -2,6 +2,7 @@ package com.trade.triage.gateway.evidence;
 
 import com.trade.triage.gateway.evidence.observability.ObservabilityClient;
 import com.trade.triage.gateway.model.ErrorSignal;
+import com.trade.triage.gateway.scrub.LogLineScrubber;
 import com.trade.triage.gateway.scrub.SecretScrubber;
 import com.trade.triage.registry.model.ProjectEntry;
 import org.springframework.stereotype.Service;
@@ -23,13 +24,15 @@ public class ScrubbedEvidenceCollector implements EvidenceCollector {
     private final ObservabilityClient observability;
     private final CommitHistory commitHistory;
     private final SecretScrubber scrubber;
+    private final LogLineScrubber logLineScrubber;
     private final Clock clock;
 
     public ScrubbedEvidenceCollector(ObservabilityClient observability, CommitHistory commitHistory,
-                                     SecretScrubber scrubber, Clock clock) {
+                                     SecretScrubber scrubber, LogLineScrubber logLineScrubber, Clock clock) {
         this.observability = observability;
         this.commitHistory = commitHistory;
         this.scrubber = scrubber;
+        this.logLineScrubber = logLineScrubber;
         this.clock = clock;
     }
 
@@ -71,6 +74,6 @@ public class ScrubbedEvidenceCollector implements EvidenceCollector {
     }
 
     private List<String> limpar(List<String> linhas) {
-        return linhas.stream().map(scrubber::scrubText).toList();
+        return linhas.stream().map(logLineScrubber::scrub).toList();
     }
 }

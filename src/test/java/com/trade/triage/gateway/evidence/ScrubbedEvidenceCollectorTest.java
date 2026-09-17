@@ -2,6 +2,7 @@ package com.trade.triage.gateway.evidence;
 
 import com.trade.triage.gateway.evidence.observability.ObservabilityClient;
 import com.trade.triage.gateway.model.ErrorSignal;
+import com.trade.triage.gateway.scrub.LogLineScrubber;
 import com.trade.triage.gateway.scrub.ScrubProperties;
 import com.trade.triage.gateway.scrub.SecretScrubber;
 import com.trade.triage.registry.model.ProjectEntry;
@@ -45,8 +46,10 @@ class ScrubbedEvidenceCollectorTest {
 
     @BeforeEach
     void setUp() {
-        collector = new ScrubbedEvidenceCollector(observability, commitHistory,
-                new SecretScrubber(new ScrubProperties(null, null)), Clock.fixed(AGORA, ZoneOffset.UTC));
+        SecretScrubber scrubber = new SecretScrubber(new ScrubProperties(null, null));
+        collector = new ScrubbedEvidenceCollector(observability, commitHistory, scrubber,
+                new LogLineScrubber(scrubber, new com.fasterxml.jackson.databind.ObjectMapper()),
+                Clock.fixed(AGORA, ZoneOffset.UTC));
         lenient().when(observability.logsPorServico(anyString(), anyString(), any(), any())).thenReturn(List.of());
         lenient().when(observability.serieDeErros(anyString(), anyString(), any(), any())).thenReturn(List.of());
         lenient().when(observability.metricasDoServico(anyString(), any(), any())).thenReturn(Map.of());
@@ -93,6 +96,18 @@ class ScrubbedEvidenceCollectorTest {
 
         assertThat(pacote.stacktrace()).doesNotContain("sk_live_ABCdef123456789");
         assertThat(pacote.logsDoTrace().getFirst()).doesNotContain("abc123secreto");
+    }
+
+    @Test
+    void linhaDeLogEstruturadaTemCampoDesconhecidoRedigido() {
+        when(observability.logsPorTrace(anyString(), any(), any())).thenReturn(List.of(
+                "{\"service\":\"trade-backend\",\"message\":\"boom\",\"campo_novo\":\"valor sensivel\"}"));
+
+        EvidencePackage pacote = collector.collect(sinal("t1"), projeto, "f1");
+
+        assertThat(pacote.logsDoTrace().getFirst())
+                .contains("trade-backend")
+                .doesNotContain("valor sensivel");
     }
 
     @Test
