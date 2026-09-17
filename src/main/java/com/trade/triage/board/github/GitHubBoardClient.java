@@ -76,6 +76,24 @@ public class GitHubBoardClient implements BoardClient {
     }
 
     @Override
+    public List<CardRef> cardsAbertosComLabel(String repositorio, String label) {
+        IssueDetailResponse[] respostas = restClient.get()
+                .uri(builder -> builder.path("/repos/{owner}/{repo}/issues")
+                        .queryParam("labels", label)
+                        .queryParam("state", "open")
+                        .queryParam("per_page", PAGINA_DE_COMENTARIOS)
+                        .build(owner(repositorio), nome(repositorio)))
+                .retrieve()
+                .body(IssueDetailResponse[].class);
+        if (respostas == null) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(respostas)
+                .map(resposta -> new CardRef(repositorio, resposta.number()))
+                .toList();
+    }
+
+    @Override
     public void comentar(CardRef card, String comentario) {
         restClient.post()
                 .uri("/repos/{owner}/{repo}/issues/{numero}/comments", owner(card.repositorio()), nome(card.repositorio()), card.numero())

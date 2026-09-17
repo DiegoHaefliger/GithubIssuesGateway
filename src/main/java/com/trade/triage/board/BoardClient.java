@@ -17,6 +17,8 @@ public interface BoardClient {
 
     List<CardComment> lerComentarios(CardRef card);
 
+    List<CardRef> cardsAbertosComLabel(String repositorio, String label);
+
     void comentar(CardRef card, String comentario);
 
     void aplicarLabel(CardRef card, String label);

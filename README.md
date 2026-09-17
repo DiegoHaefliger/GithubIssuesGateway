@@ -74,6 +74,7 @@ Variáveis principais:
 | `TRIAGE_URL_PUBLICA` | URL que o runner usa para sinalizar conclusão |
 | `TRIAGE_AUTO_FIX` | liga AUTO_FIX; nasce em `false` (§11 da arquitetura) |
 | `TRIAGE_KILL_SWITCH` | desliga toda ação automática |
+| `TRIAGE_POLLING` | liga o polling de fallback quando o webhook do board não é confiável |
 
 ## Endpoints
 
@@ -81,7 +82,7 @@ Variáveis principais:
 |---|---|---|
 | `POST /webhooks/grafana` | Grafana | ingere alertas, deduplica e abre o card |
 | `GET /jobs/{jobId}/contexto` | GitHub Actions | entrega card e evidência ao runner, que não tem credencial |
-| `POST /webhooks/board` | GitHub | `issues.labeled` e `issue_comment.created` enfileiram job |
+| `POST /webhooks/board` | GitHub | `issues.labeled` e `issue_comment.created` enfileiram job; `issues.closed`, `pull_request.closed` e `push` registram desfecho |
 | `POST /webhooks/runner/{jobId}` | GitHub Actions | apenas sinaliza o fim; o resultado é puxado depois |
 | `GET /actuator/metrics` | operação | métricas do §9 |
 
@@ -91,6 +92,19 @@ Todos autenticam. O board e o runner assinam com HMAC-SHA256
 (`X-Hub-Signature-256`); o Grafana manda `Authorization: Bearer` ou `Basic`,
 configurado no contact point. Falha fechada: token não configurado significa
 webhook recusado, nunca aberto.
+
+## Desfecho e métricas
+
+O ciclo só fecha quando o desfecho volta. `pull_request.closed` marca o registro
+de decisão como `MERGED` ou `REJEITADO`; um commit de revert que carregue o
+trailer `Fingerprint:` marca `REVERTIDO` e devolve o fingerprint para humano;
+`issues.closed` resolve o fingerprint, e um card fechado sem nenhuma decisão do
+gate conta como falso positivo da regra que disparou.
+
+É isso que alimenta o §9: aceite por decisão, reversão, falso positivo por
+`rule_id`, tempo até a primeira análise, MTTR por severidade e minutos de Actions
+(lidos do endpoint de timing da execução). O consumo de quota da assinatura não é
+observável daqui — o que se mede é execução de runner por projeto.
 
 ## Parar tudo
 
@@ -139,6 +153,19 @@ mede o diff, checa a allowlist e classifica o blast radius.
 | URI do pacote de evidência no PR | `feat/12-evidence-uri` | pronto |
 | Contexto do card e evidência para o runner | `feat/13-runner-context` | pronto |
 | Autenticação do webhook do Grafana | `feat/14-grafana-webhook-auth` | pronto |
+| Desfecho do PR e resolução do fingerprint | `feat/15-pr-outcome` | pronto |
+| Card agregado de tempestade | `feat/16-storm-card` | pronto |
+| Auto-merge no AUTO_FIX | `feat/17-auto-merge` | pronto |
+| Watchdog cancela o runner órfão | `feat/18-watchdog-cancel` | pronto |
+| Scrub campo a campo de log estruturado | `feat/19-structured-scrub` | pronto |
+| Idempotência por id de entrega | `feat/20-webhook-idempotency` | pronto |
+| Deploys e painel na evidência | `feat/21-evidence-gaps` | pronto |
+| Métricas do §9 completas | `feat/22-metrics-complete` | pronto |
+| Polling de fallback | `feat/23-polling-fallback` | pronto |
 
 Fora do escopo desta implementação, por decisão da arquitetura: as regras de
 alerta do Grafana (artefato versionado à parte) e o dono do kill switch (§12.2).
+
+Duas lacunas permanecem por falta de fonte, e o pacote de evidência as declara em
+vez de fingir que coletou: trace distribuído (Tempo não existe no ambiente) e
+estado de flags e config vigente (não há serviço de config).

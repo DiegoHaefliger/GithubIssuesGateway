@@ -132,6 +132,19 @@ class GitHubBoardClientTest {
     }
 
     @Test
+    void listaCardsAbertosComALabelDaTriagem() {
+        server.expect(requestTo(
+                        "https://api.github.com/repos/acme/trade/issues?labels=auto-triage&state=open&per_page=100"))
+                .andRespond(withSuccess("""
+                        [{"number": 123, "title": "t", "body": "b", "state": "open"}]
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThat(client.cardsAbertosComLabel("acme/trade", "auto-triage"))
+                .containsExactly(new CardRef("acme/trade", 123));
+        server.verify();
+    }
+
+    @Test
     void naoMandaCorpoVazioAoCriarCard() {
         server.expect(requestTo("https://api.github.com/repos/acme/trade/issues"))
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))

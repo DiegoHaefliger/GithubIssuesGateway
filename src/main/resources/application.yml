@@ -63,6 +63,8 @@ triage:
     intervalo-do-watchdog: ${TRIAGE_INTERVALO_WATCHDOG:60s}
     intervalo-da-avaliacao: ${TRIAGE_INTERVALO_AVALIACAO:20s}
     intervalo-da-limpeza: ${TRIAGE_INTERVALO_LIMPEZA:6h}
+    polling-habilitado: ${TRIAGE_POLLING:false}
+    intervalo-do-polling: ${TRIAGE_INTERVALO_POLLING:5m}
     url-publica: ${TRIAGE_URL_PUBLICA:}
   verificacao:
     diretorio-de-trabalho: ${TRIAGE_WORKTREE_DIR:var/worktrees}
