@@ -53,9 +53,9 @@ class FingerprintRepositoryTest {
         repository.save(novo("aaaa"));
         repository.save(novo("bbbb"));
 
-        assertThat(repository.countByProjetoAndFirstSeenAfter("trade", AGORA.minus(Duration.ofHours(1))))
+        assertThat(repository.countByProjetoAndFirstSeenAfterAndFingerprintNotLike("trade", AGORA.minus(Duration.ofHours(1)), "storm-%"))
                 .isEqualTo(2);
-        assertThat(repository.countByProjetoAndFirstSeenAfter("trade", AGORA.plus(Duration.ofHours(1))))
+        assertThat(repository.countByProjetoAndFirstSeenAfterAndFingerprintNotLike("trade", AGORA.plus(Duration.ofHours(1)), "storm-%"))
                 .isZero();
     }
 

@@ -1,6 +1,7 @@
 package com.trade.triage.orchestrator.job;
 
 import com.trade.triage.board.model.CardRef;
+import com.trade.triage.gateway.service.StormWindow;
 import com.trade.triage.persistence.entity.FingerprintEntity;
 import com.trade.triage.persistence.entity.JobState;
 import com.trade.triage.persistence.entity.TriageJobEntity;
@@ -58,6 +59,10 @@ public class DefaultTriageJobService implements TriageJobService {
         if (estado.isEmpty()) {
             return JobEnqueueResult.recusado(JobEnqueueOutcome.CARD_DESCONHECIDO,
                     "card " + cardRef + " nao foi criado pela triagem");
+        }
+        if (StormWindow.ehTempestade(estado.get().getFingerprint())) {
+            return JobEnqueueResult.recusado(JobEnqueueOutcome.CARD_DESCONHECIDO,
+                    "card de tempestade nao aciona o agente");
         }
         Optional<ProjectEntry> projeto = registry.findByRepository(CardRef.parse(cardRef).repositorio());
         if (projeto.isEmpty()) {

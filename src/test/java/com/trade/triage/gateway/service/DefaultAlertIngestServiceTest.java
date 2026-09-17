@@ -188,17 +188,46 @@ class DefaultAlertIngestServiceTest {
     }
 
     @Test
-    void tetoDeCardsPorHoraViraStormSemCard() {
+    void tetoDeCardsPorHoraAbreUmUnicoCardDeTempestade() {
         registraProjeto();
         when(repository.findById(anyString())).thenReturn(Optional.empty());
         when(rateLimiter.estourouTeto(projeto)).thenReturn(true);
+        when(board.criarCard(anyString(), any())).thenReturn(new CardRef("acme/trade", 900));
 
         List<IngestResult> resultados = service.ingest(webhook(alerta("Falha ao fechar posicao 42")));
 
         assertThat(resultados).singleElement()
+                .extracting(IngestResult::resultado, IngestResult::cardRef)
+                .containsExactly(IngestOutcome.STORM, "acme/trade#900");
+
+        ArgumentCaptor<CardContent> captor = ArgumentCaptor.forClass(CardContent.class);
+        verify(board).criarCard(anyString(), captor.capture());
+        assertThat(captor.getValue().titulo()).contains("tempestade");
+        assertThat(captor.getValue().labels()).containsExactly("storm", "aguardando-humano");
+        assertThat(captor.getValue().labels()).doesNotContain("auto-triage");
+    }
+
+    @Test
+    void segundoErroNaMesmaJanelaSoComentaNoCardDeTempestade() {
+        registraProjeto();
+        FingerprintEntity tempestade = new FingerprintEntity(
+                StormWindow.identificadorDe("trade", AGORA), "trade-backend", "producao", "trade",
+                "r1", "critical", AGORA);
+        tempestade.vincularCard("acme/trade#900");
+        when(repository.findById(anyString())).thenAnswer(invocacao -> {
+            String chave = invocacao.getArgument(0);
+            return StormWindow.ehTempestade(chave) ? Optional.of(tempestade) : Optional.empty();
+        });
+        when(rateLimiter.estourouTeto(projeto)).thenReturn(true);
+
+        List<IngestResult> resultados = service.ingest(webhook(alerta("outro erro qualquer")));
+
+        assertThat(resultados).singleElement()
                 .extracting(IngestResult::resultado)
                 .isEqualTo(IngestOutcome.STORM);
+        assertThat(tempestade.getOccurrenceCount()).isEqualTo(2);
         verify(board, never()).criarCard(anyString(), any());
+        verify(board).comentar(any(), anyString());
     }
 
     @Test

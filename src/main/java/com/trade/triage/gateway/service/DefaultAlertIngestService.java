@@ -113,8 +113,7 @@ public class DefaultAlertIngestService implements AlertIngestService {
         }
         if (rateLimiter.estourouTeto(projeto)) {
             LOG.warn("teto de cards por hora estourado projeto={} fingerprint={}", projeto.projeto(), fingerprint);
-            return IngestResult.de(IngestOutcome.STORM,
-                    "teto de " + projeto.limites().cardsPorHora() + " cards por hora atingido");
+            return agregarNaTempestade(signal, projeto);
         }
         return abrirCard(signal, projeto, fingerprint);
     }
@@ -139,6 +138,34 @@ public class DefaultAlertIngestService implements AlertIngestService {
         }
         board.comentar(card, cardBuilder.comentarioDeRecorrencia(estado));
         return IngestResult.comCard(IngestOutcome.DEDUPLICADO, estado.getFingerprint(), card.asString());
+    }
+
+    private IngestResult agregarNaTempestade(ErrorSignal signal, ProjectEntry projeto) {
+        String janela = StormWindow.identificadorDe(projeto.projeto(), momento(signal));
+        Optional<FingerprintEntity> aberta = repository.findById(janela);
+        if (aberta.isPresent()) {
+            FingerprintEntity estado = aberta.get();
+            estado.registrarOcorrencia(momento(signal));
+            repository.save(estado);
+            if (estado.getCardRef() != null) {
+                board.comentar(CardRef.parse(estado.getCardRef()),
+                        cardBuilder.comentarioDeTempestade(estado, signal));
+            }
+            return IngestResult.comCard(IngestOutcome.STORM, janela, estado.getCardRef());
+        }
+
+        FingerprintEntity estado = new FingerprintEntity(janela, signal.service(), signal.env(),
+                projeto.projeto(), signal.ruleId(), signal.severity(), momento(signal));
+        CardRef card = board.criarCard(projeto.board(),
+                cardBuilder.storm(signal, estado, projeto.limites().cardsPorHora()));
+        estado.vincularCard(card.asString());
+        estado.mudarEstado(FingerprintState.AGUARDANDO_HUMANO);
+        repository.save(estado);
+
+        metrics.contarTempestade(projeto.projeto());
+        LOG.warn("card de tempestade aberto projeto={} janela={} card={}",
+                projeto.projeto(), janela, card.asString());
+        return IngestResult.comCard(IngestOutcome.STORM, janela, card.asString());
     }
 
     private IngestResult abrirCard(ErrorSignal signal, ProjectEntry projeto, String fingerprint) {

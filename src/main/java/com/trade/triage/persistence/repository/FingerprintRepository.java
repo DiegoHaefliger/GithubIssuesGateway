@@ -14,7 +14,7 @@ public interface FingerprintRepository extends JpaRepository<FingerprintEntity, 
 
     List<FingerprintEntity> findByProjetoAndStateNot(String projeto, FingerprintState state);
 
-    long countByProjetoAndFirstSeenAfter(String projeto, Instant desde);
+    long countByProjetoAndFirstSeenAfterAndFingerprintNotLike(String projeto, Instant desde, String padrao);
 
     long countByStateAndLastSeenAfter(FingerprintState state, Instant desde);
 }

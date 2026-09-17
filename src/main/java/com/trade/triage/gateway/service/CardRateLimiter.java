@@ -11,6 +11,7 @@ import java.time.Duration;
 public class CardRateLimiter {
 
     private static final Duration JANELA = Duration.ofHours(1);
+    private static final String PADRAO_DE_TEMPESTADE = "storm-%";
 
     private final FingerprintRepository repository;
     private final Clock clock;
@@ -29,6 +30,7 @@ public class CardRateLimiter {
     }
 
     private long cardsNaJanela(ProjectEntry projeto) {
-        return repository.countByProjetoAndFirstSeenAfter(projeto.projeto(), clock.instant().minus(JANELA));
+        return repository.countByProjetoAndFirstSeenAfterAndFingerprintNotLike(
+                projeto.projeto(), clock.instant().minus(JANELA), PADRAO_DE_TEMPESTADE);
     }
 }

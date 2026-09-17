@@ -14,6 +14,8 @@ import java.util.List;
 public class CardContentBuilder {
 
     public static final String LABEL_AUTO_TRIAGE = "auto-triage";
+    public static final String LABEL_STORM = "storm";
+    public static final String LABEL_AGUARDANDO_HUMANO = "aguardando-humano";
     private static final int LINHAS_DE_STACK_NO_CARD = 12;
 
     private final SecretScrubber scrubber;
@@ -25,6 +27,58 @@ public class CardContentBuilder {
     public CardContent build(ErrorSignal signal, FingerprintEntity estado,
                              EvidencePackage evidencia, String evidenciaUri) {
         return new CardContent(titulo(signal, estado), corpo(signal, estado, evidencia, evidenciaUri), labels(signal));
+    }
+
+    public CardContent storm(ErrorSignal signal, FingerprintEntity estado, int cardsPorHora) {
+        return new CardContent(
+                "[triagem] tempestade de erros em %s".formatted(estado.getProjeto()),
+                """
+                ## Identidade
+                - Card agregado de tempestade
+                - Projeto: `%s`
+                - Servico: `%s`
+                - Ambiente: `%s`
+                - Janela: `%s`
+
+                ## Por que este card existe
+                O teto de %d cards por hora foi atingido. A partir daqui a triagem para
+                de abrir um card por fingerprint nesta janela e agrega tudo aqui.
+
+                ## Frequencia
+                - Erros suprimidos nesta janela: %d
+                - Primeiro: %s
+                - Ultimo: %s
+
+                ## Ultimo sintoma visto
+                - Excecao: `%s`
+                - Mensagem: %s
+
+                ## O que fazer
+                Tempestade e sinal de incidente ou de regra de alerta ruim. O agente nao
+                foi acionado: quem decide aqui e gente.
+                """.formatted(
+                        estado.getProjeto(),
+                        signal.service(),
+                        signal.env(),
+                        estado.getFingerprint(),
+                        cardsPorHora,
+                        estado.getOccurrenceCount(),
+                        estado.getFirstSeen(),
+                        estado.getLastSeen(),
+                        textoOuTraco(signal.exceptionClass()),
+                        scrubber.scrubText(textoOuTraco(signal.message()))),
+                List.of(LABEL_STORM, LABEL_AGUARDANDO_HUMANO));
+    }
+
+    public String comentarioDeTempestade(FingerprintEntity estado, ErrorSignal signal) {
+        return """
+                Mais um erro suprimido pela tempestade.
+
+                - Total na janela: %d
+                - Ultimo: %s
+                - Excecao: `%s`
+                """.formatted(estado.getOccurrenceCount(), estado.getLastSeen(),
+                textoOuTraco(signal.exceptionClass()));
     }
 
     public String comentarioDeRecorrencia(FingerprintEntity estado) {

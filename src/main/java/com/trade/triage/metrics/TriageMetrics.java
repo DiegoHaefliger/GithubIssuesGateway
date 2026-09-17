@@ -43,6 +43,10 @@ public class TriageMetrics {
         Counter.builder("triagem.cards.criados").tag("projeto", projeto).register(meterRegistry).increment();
     }
 
+    public void contarTempestade(String projeto) {
+        Counter.builder("triagem.tempestades").tag("projeto", projeto).register(meterRegistry).increment();
+    }
+
     public void contarLogOrfao(String service) {
         Counter.builder("triagem.logs.orfaos").tag("service", service).register(meterRegistry).increment();
     }

@@ -34,7 +34,7 @@ class CardRateLimiterTest {
 
     @Test
     void permiteAbaixoDoTeto() {
-        when(repository.countByProjetoAndFirstSeenAfter(eq("trade"), any())).thenReturn(1L);
+        when(repository.countByProjetoAndFirstSeenAfterAndFingerprintNotLike(eq("trade"), any(), eq("storm-%"))).thenReturn(1L);
 
         assertThat(limiter().permiteNovoCard(projeto)).isTrue();
         assertThat(limiter().estourouTeto(projeto)).isFalse();
@@ -42,7 +42,7 @@ class CardRateLimiterTest {
 
     @Test
     void bloqueiaNoTeto() {
-        when(repository.countByProjetoAndFirstSeenAfter(eq("trade"), any())).thenReturn(2L);
+        when(repository.countByProjetoAndFirstSeenAfterAndFingerprintNotLike(eq("trade"), any(), eq("storm-%"))).thenReturn(2L);
 
         assertThat(limiter().permiteNovoCard(projeto)).isFalse();
         assertThat(limiter().estourouTeto(projeto)).isTrue();
@@ -50,7 +50,7 @@ class CardRateLimiterTest {
 
     @Test
     void bloqueiaAcimaDoTeto() {
-        when(repository.countByProjetoAndFirstSeenAfter(eq("trade"), any())).thenReturn(90L);
+        when(repository.countByProjetoAndFirstSeenAfterAndFingerprintNotLike(eq("trade"), any(), eq("storm-%"))).thenReturn(90L);
 
         assertThat(limiter().estourouTeto(projeto)).isTrue();
     }
