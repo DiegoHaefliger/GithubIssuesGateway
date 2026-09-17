@@ -147,6 +147,7 @@ public class DefaultAlertIngestService implements AlertIngestService {
 
         EvidencePackage evidencia = evidenceCollector.collect(signal, projeto, fingerprint);
         String evidenciaUri = evidenceStore.store(evidencia);
+        estado.vincularEvidencia(evidenciaUri);
 
         CardRef card = board.criarCard(projeto.board(),
                 cardBuilder.build(signal, estado, evidencia, evidenciaUri));

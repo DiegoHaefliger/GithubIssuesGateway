@@ -123,7 +123,7 @@ public class TriageCompletionService {
         String branch = patchPublisher.publicarBranch(job, projeto, resultado, decisao, fatos.blastRadius());
         PullRequestRef pullRequest = board.abrirPullRequest(projeto.repositorio(), new PullRequestContent(
                 pullRequestBuilder.titulo(resultado),
-                pullRequestBuilder.build(resultado, decisao, fatos, estado, estado.getCardRef()),
+                pullRequestBuilder.build(resultado, decisao, fatos, estado, estado.getEvidenciaUri()),
                 branch,
                 projeto.branchBase()));
 

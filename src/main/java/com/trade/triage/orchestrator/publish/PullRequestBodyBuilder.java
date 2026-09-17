@@ -52,11 +52,17 @@ public class PullRequestBodyBuilder {
                 decisao.explicacao(),
                 decisao.regraDecisora(),
                 fatos.blastRadius(),
-                evidenciaUri);
+                textoOuAusente(evidenciaUri));
     }
 
     public String titulo(TriageResult resultado) {
         return "fix: " + resultado.justificativa().lines().findFirst().orElse(resultado.hipotese());
+    }
+
+    private String textoOuAusente(String evidenciaUri) {
+        return evidenciaUri == null || evidenciaUri.isBlank()
+                ? "_pacote de evidencia indisponivel_"
+                : evidenciaUri;
     }
 
     private String lista(List<String> itens) {

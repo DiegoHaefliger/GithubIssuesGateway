@@ -36,6 +36,9 @@ public class FingerprintEntity {
     @Column(name = "card_ref")
     private String cardRef;
 
+    @Column(name = "evidencia_uri", length = 1024)
+    private String evidenciaUri;
+
     @Column(name = "occurrence_count", nullable = false)
     private long occurrenceCount;
 
@@ -86,6 +89,10 @@ public class FingerprintEntity {
         this.state = FingerprintState.TRIADO;
     }
 
+    public void vincularEvidencia(String evidenciaUri) {
+        this.evidenciaUri = evidenciaUri;
+    }
+
     public void mudarEstado(FingerprintState novoEstado) {
         this.state = novoEstado;
     }
@@ -120,6 +127,10 @@ public class FingerprintEntity {
 
     public String getCardRef() {
         return cardRef;
+    }
+
+    public String getEvidenciaUri() {
+        return evidenciaUri;
     }
 
     public long getOccurrenceCount() {

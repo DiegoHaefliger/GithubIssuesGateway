@@ -129,6 +129,21 @@ class DefaultAlertIngestServiceTest {
     }
 
     @Test
+    void guardaAUriDoPacoteDeEvidenciaNoFingerprint() {
+        registraProjeto();
+        when(repository.findById(anyString())).thenReturn(Optional.empty());
+        when(evidenceCollector.collect(any(), any(), anyString())).thenReturn(evidencia());
+        when(evidenceStore.store(any())).thenReturn("file:///var/evidencia/p1.json");
+        when(board.criarCard(anyString(), any())).thenReturn(new CardRef("acme/trade", 123));
+
+        service.ingest(webhook(alerta("Falha ao fechar posicao 42")));
+
+        ArgumentCaptor<FingerprintEntity> captor = ArgumentCaptor.forClass(FingerprintEntity.class);
+        verify(repository).save(captor.capture());
+        assertThat(captor.getValue().getEvidenciaUri()).isEqualTo("file:///var/evidencia/p1.json");
+    }
+
+    @Test
     void recorrenciaComentaNoCardSemCriarOutro() {
         registraProjeto();
         FingerprintEntity existente = existente(FingerprintState.TRIADO);
