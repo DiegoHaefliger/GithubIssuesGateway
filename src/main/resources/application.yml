@@ -33,3 +33,9 @@ triage:
   scrub:
     campos-sensiveis: ${TRIAGE_SCRUB_SENSIVEIS:}
     campos-conhecidos: ${TRIAGE_SCRUB_CONHECIDOS:}
+  github:
+    api-url: ${TRIAGE_GITHUB_API:https://api.github.com}
+    token: ${TRIAGE_GITHUB_TOKEN:}
+    webhook-secret: ${TRIAGE_GITHUB_WEBHOOK_SECRET:}
+    workflow-arquivo: ${TRIAGE_GITHUB_WORKFLOW:triage-runner.yml}
+    timeout: ${TRIAGE_GITHUB_TIMEOUT:20s}
