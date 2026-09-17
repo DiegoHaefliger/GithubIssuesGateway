@@ -20,17 +20,21 @@ public class ScrubbedEvidenceCollector implements EvidenceCollector {
     private static final Duration JANELA_TRACE = Duration.ofMinutes(5);
     private static final Duration JANELA_SERIE = Duration.ofHours(24);
     private static final Duration JANELA_COMMITS = Duration.ofHours(24);
+    private static final Duration JANELA_DEPLOYS = Duration.ofHours(24);
 
     private final ObservabilityClient observability;
     private final CommitHistory commitHistory;
+    private final DeploymentHistory deploymentHistory;
     private final SecretScrubber scrubber;
     private final LogLineScrubber logLineScrubber;
     private final Clock clock;
 
     public ScrubbedEvidenceCollector(ObservabilityClient observability, CommitHistory commitHistory,
-                                     SecretScrubber scrubber, LogLineScrubber logLineScrubber, Clock clock) {
+                                     DeploymentHistory deploymentHistory, SecretScrubber scrubber,
+                                     LogLineScrubber logLineScrubber, Clock clock) {
         this.observability = observability;
         this.commitHistory = commitHistory;
+        this.deploymentHistory = deploymentHistory;
         this.scrubber = scrubber;
         this.logLineScrubber = logLineScrubber;
         this.clock = clock;
@@ -56,6 +60,12 @@ public class ScrubbedEvidenceCollector implements EvidenceCollector {
             lacunas.add("historico de commits indisponivel em " + projeto.diretorio());
         }
 
+        List<String> deploys = deploymentHistory.deploysRecentes(projeto, signal.env(), JANELA_DEPLOYS);
+        if (deploys.isEmpty()) {
+            lacunas.add("nenhum deploy registrado nas ultimas 24h, ou a API de deployments nao respondeu");
+        }
+        lacunas.add("estado de flags e config vigente nao coletado: nao ha servico de config no ambiente");
+
         return new EvidencePackage(
                 UUID.randomUUID().toString(),
                 fingerprint,
@@ -67,9 +77,9 @@ public class ScrubbedEvidenceCollector implements EvidenceCollector {
                 limpar(observability.logsPorServico(signal.service(), signal.env(), inicio, fim)),
                 observability.serieDeErros(signal.service(), signal.env(), momento.minus(JANELA_SERIE), fim),
                 observability.metricasDoServico(signal.service(), inicio, fim),
-                List.of(),
+                deploys,
                 commits,
-                null,
+                signal.painelUrl(),
                 List.copyOf(lacunas));
     }
 

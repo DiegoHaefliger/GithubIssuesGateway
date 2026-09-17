@@ -55,7 +55,7 @@ class FingerprintCalculatorTest {
         ErrorSignal breaker = sinal("Falha ao fechar posicao 1");
         ErrorSignal guard = new ErrorSignal("trade-backend", "producao", "r1", "critical", "t1",
                 "com.trade.risk.StopLossGuard", "java.lang.NullPointerException",
-                STACK_OUTRO_CAMINHO, "Falha ao fechar posicao 1", Instant.EPOCH);
+                STACK_OUTRO_CAMINHO, "Falha ao fechar posicao 1", null, Instant.EPOCH);
 
         assertThat(calculator.calculate(breaker, projeto)).isNotEqualTo(calculator.calculate(guard, projeto));
     }
@@ -64,7 +64,7 @@ class FingerprintCalculatorTest {
     void servicosDiferentesNaoColidem() {
         ErrorSignal outroServico = new ErrorSignal("trade-worker", "producao", "r1", "critical", "t1",
                 "com.trade.execution.ExitReasonResolver", "java.lang.NullPointerException",
-                STACK_BREAKER, "Falha ao fechar posicao 1", Instant.EPOCH);
+                STACK_BREAKER, "Falha ao fechar posicao 1", null, Instant.EPOCH);
 
         assertThat(calculator.calculate(sinal("Falha ao fechar posicao 1"), projeto))
                 .isNotEqualTo(calculator.calculate(outroServico, projeto));
@@ -75,7 +75,7 @@ class FingerprintCalculatorTest {
         ErrorSignal semFrame = new ErrorSignal("trade-backend", "producao", "r1", "critical", "t1",
                 "com.trade.X", "java.lang.NullPointerException",
                 "    at io.quarkus.arc.impl.InterceptorInvocation.invoke(InterceptorInvocation.java:41)",
-                "boom", Instant.EPOCH);
+                "boom", null, Instant.EPOCH);
 
         assertThat(calculator.calculate(semFrame, projeto)).hasSize(16);
     }
@@ -83,6 +83,6 @@ class FingerprintCalculatorTest {
     private ErrorSignal sinal(String message) {
         return new ErrorSignal("trade-backend", "producao", "r1", "critical", "t1",
                 "com.trade.execution.ExitReasonResolver", "java.lang.NullPointerException",
-                STACK_BREAKER, message, Instant.EPOCH);
+                STACK_BREAKER, message, null, Instant.EPOCH);
     }
 }

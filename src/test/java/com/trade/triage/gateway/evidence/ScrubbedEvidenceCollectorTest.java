@@ -41,19 +41,23 @@ class ScrubbedEvidenceCollectorTest {
     private ObservabilityClient observability;
     @Mock
     private CommitHistory commitHistory;
+    @Mock
+    private DeploymentHistory deploymentHistory;
 
     private ScrubbedEvidenceCollector collector;
 
     @BeforeEach
     void setUp() {
         SecretScrubber scrubber = new SecretScrubber(new ScrubProperties(null, null));
-        collector = new ScrubbedEvidenceCollector(observability, commitHistory, scrubber,
+        collector = new ScrubbedEvidenceCollector(observability, commitHistory, deploymentHistory, scrubber,
                 new LogLineScrubber(scrubber, new com.fasterxml.jackson.databind.ObjectMapper()),
                 Clock.fixed(AGORA, ZoneOffset.UTC));
         lenient().when(observability.logsPorServico(anyString(), anyString(), any(), any())).thenReturn(List.of());
         lenient().when(observability.serieDeErros(anyString(), anyString(), any(), any())).thenReturn(List.of());
         lenient().when(observability.metricasDoServico(anyString(), any(), any())).thenReturn(Map.of());
         lenient().when(commitHistory.commitsRecentes(any(), any())).thenReturn(List.of("abc123 alguem fix"));
+        lenient().when(deploymentHistory.deploysRecentes(any(), anyString(), any()))
+                .thenReturn(List.of("52709a0 master em 2026-09-17T09:00:00Z"));
     }
 
     @Test
@@ -121,6 +125,36 @@ class ScrubbedEvidenceCollectorTest {
     }
 
     @Test
+    void trazDeploysDasUltimas24hEOLinkDoPainel() {
+        when(observability.logsPorTrace(anyString(), any(), any())).thenReturn(List.of());
+
+        EvidencePackage pacote = collector.collect(sinal("t1"), projeto, "f1");
+
+        assertThat(pacote.deploysRecentes()).containsExactly("52709a0 master em 2026-09-17T09:00:00Z");
+        assertThat(pacote.painelUrl()).isEqualTo("https://grafana/d/painel");
+        verify(deploymentHistory).deploysRecentes(projeto, "producao", Duration.ofHours(24));
+    }
+
+    @Test
+    void semDeployRegistraLacuna() {
+        when(observability.logsPorTrace(anyString(), any(), any())).thenReturn(List.of());
+        when(deploymentHistory.deploysRecentes(any(), anyString(), any())).thenReturn(List.of());
+
+        EvidencePackage pacote = collector.collect(sinal("t1"), projeto, "f1");
+
+        assertThat(pacote.lacunas()).anyMatch(lacuna -> lacuna.contains("deploy"));
+    }
+
+    @Test
+    void registraQueFlagsEConfigNaoSaoColetadas() {
+        when(observability.logsPorTrace(anyString(), any(), any())).thenReturn(List.of());
+
+        EvidencePackage pacote = collector.collect(sinal("t1"), projeto, "f1");
+
+        assertThat(pacote.lacunas()).anyMatch(lacuna -> lacuna.contains("flags e config"));
+    }
+
+    @Test
     void semCommitsRegistraLacuna() {
         when(observability.logsPorTrace(anyString(), any(), any())).thenReturn(List.of());
         when(commitHistory.commitsRecentes(any(), any())).thenReturn(List.of());
@@ -133,12 +167,12 @@ class ScrubbedEvidenceCollectorTest {
     private ErrorSignal sinal(String traceId) {
         return new ErrorSignal("trade-backend", "producao", "r1", "critical", traceId,
                 "com.trade.X", "java.lang.NullPointerException", "at com.trade.X.y(X.java:1)",
-                "boom", AGORA);
+                "boom", "https://grafana/d/painel", AGORA);
     }
 
     private ErrorSignal sinalComSegredo() {
         return new ErrorSignal("trade-backend", "producao", "r1", "critical", "t1",
                 "com.trade.X", "java.lang.NullPointerException",
-                "at com.trade.X.y(X.java:1) chave sk_live_ABCdef123456789", "boom", AGORA);
+                "at com.trade.X.y(X.java:1) chave sk_live_ABCdef123456789", "boom", "https://grafana/d/painel", AGORA);
     }
 }

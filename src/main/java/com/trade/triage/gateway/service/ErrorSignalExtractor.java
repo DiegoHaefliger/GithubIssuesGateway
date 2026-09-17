@@ -27,6 +27,7 @@ public class ErrorSignalExtractor {
                 alerta.annotation("exception_class"),
                 alerta.annotation("stacktrace"),
                 alerta.annotation("message"),
+                alerta.generatorUrl(),
                 momento(alerta));
     }
 

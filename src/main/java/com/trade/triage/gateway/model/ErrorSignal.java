@@ -13,6 +13,7 @@ public record ErrorSignal(
         String exceptionClass,
         String stacktrace,
         String message,
+        String painelUrl,
         Instant occurredAt) {
 
     public Optional<String> traceIdOpcional() {

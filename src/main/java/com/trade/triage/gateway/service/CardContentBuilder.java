@@ -133,6 +133,7 @@ public class CardContentBuilder {
 
                 ## Links
                 - Pacote de evidencia: %s
+                - Painel do alerta: %s
                 - Lacunas conhecidas: %s
 
                 ## Analise do agente
@@ -154,15 +155,21 @@ public class CardContentBuilder {
                 recorte(evidencia.stacktrace()),
                 contexto(evidencia),
                 evidenciaUri,
+                textoOuTraco(evidencia.painelUrl()),
                 listaOuTraco(evidencia.lacunas()));
     }
 
     private String contexto(EvidencePackage evidencia) {
-        if (evidencia.commitsSuspeitos().isEmpty()) {
-            return "- Commits recentes: nao disponiveis";
+        return secao("Deploys nas ultimas 24h", evidencia.deploysRecentes())
+                + "\n" + secao("Commits nas ultimas 24h", evidencia.commitsSuspeitos());
+    }
+
+    private String secao(String titulo, List<String> itens) {
+        if (itens.isEmpty()) {
+            return "- " + titulo + ": nao disponiveis";
         }
-        return "- Commits nas ultimas 24h:\n" + evidencia.commitsSuspeitos().stream()
-                .map(commit -> "  - " + commit)
+        return "- " + titulo + ":\n" + itens.stream()
+                .map(item -> "  - " + item)
                 .reduce((esquerda, direita) -> esquerda + "\n" + direita)
                 .orElse("");
     }
