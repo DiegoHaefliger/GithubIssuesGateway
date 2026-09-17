@@ -1,5 +1,6 @@
 package com.trade.triage.board.github;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.trade.triage.board.BoardClient;
 import com.trade.triage.board.model.CardComment;
 import com.trade.triage.board.model.CardContent;
@@ -17,6 +18,13 @@ import java.util.Map;
 public class GitHubBoardClient implements BoardClient {
 
     private static final int PAGINA_DE_COMENTARIOS = 100;
+    private static final String MUTACAO_DE_AUTO_MERGE = """
+            mutation($pullRequestId: ID!) {
+              enablePullRequestAutoMerge(input: {pullRequestId: $pullRequestId, mergeMethod: SQUASH}) {
+                pullRequest { number }
+              }
+            }
+            """;
 
     private final RestClient restClient;
 
@@ -116,7 +124,25 @@ public class GitHubBoardClient implements BoardClient {
         if (resposta == null) {
             throw new BoardOperationException("GitHub nao devolveu o pull request criado em " + repositorio);
         }
-        return new PullRequestRef(repositorio, resposta.number(), resposta.htmlUrl());
+        return new PullRequestRef(repositorio, resposta.number(), resposta.htmlUrl(), resposta.nodeId());
+    }
+
+    @Override
+    public void habilitarAutoMerge(PullRequestRef pullRequest) {
+        if (pullRequest.nodeId() == null || pullRequest.nodeId().isBlank()) {
+            throw new BoardOperationException("Pull request sem node id: " + pullRequest.asString());
+        }
+        JsonNode resposta = restClient.post()
+                .uri("/graphql")
+                .body(Map.of(
+                        "query", MUTACAO_DE_AUTO_MERGE,
+                        "variables", Map.of("pullRequestId", pullRequest.nodeId())))
+                .retrieve()
+                .body(JsonNode.class);
+        if (resposta == null || resposta.has("errors")) {
+            throw new BoardOperationException("GitHub recusou habilitar auto-merge em "
+                    + pullRequest.asString() + ": " + (resposta == null ? "sem resposta" : resposta.path("errors")));
+        }
     }
 
     private String owner(String repositorio) {

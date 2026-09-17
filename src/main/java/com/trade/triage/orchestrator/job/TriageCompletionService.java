@@ -131,6 +131,9 @@ public class TriageCompletionService {
         decisionRepository.save(registro);
         board.comentar(card, "PR aberto pela triagem: " + pullRequest.url());
         board.aplicarLabel(card, rotuloDaDecisao(decisao));
+        if (decisao.decisao() == Decision.AUTO_FIX) {
+            habilitarAutoMerge(pullRequest, card);
+        }
 
         estado.contarTentativaAutomatica();
         estado.mudarEstado(FingerprintState.EM_CORRECAO);
@@ -139,6 +142,23 @@ public class TriageCompletionService {
         job.transicionar(JobState.PUBLICADO, clock.instant());
         jobRepository.save(job);
         LOG.info("pr publicado job={} card={} pr={}", job.getJobId(), job.getCardRef(), pullRequest.asString());
+    }
+
+    private void habilitarAutoMerge(PullRequestRef pullRequest, CardRef card) {
+        try {
+            board.habilitarAutoMerge(pullRequest);
+            board.comentar(card, "Auto-merge habilitado: o PR entra sozinho se o CI passar.");
+        } catch (RuntimeException exception) {
+            LOG.error("falha ao habilitar auto-merge pr={} motivo={}",
+                    pullRequest.asString(), exception.getMessage());
+            board.comentar(card, """
+                    Nao foi possivel habilitar o auto-merge neste PR, entao ele **espera revisao humana**
+                    apesar da decisao AUTO_FIX.
+
+                    Motivo: %s
+                    """.formatted(exception.getMessage()));
+            board.aplicarLabel(card, LABEL_AGUARDANDO_HUMANO);
+        }
     }
 
     private void barrar(TriageJobEntity job, FingerprintEntity estado, CardRef card) {

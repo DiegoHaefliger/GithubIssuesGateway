@@ -48,6 +48,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -142,7 +143,7 @@ class TriageCompletionServiceTest {
         when(decisionRepository.save(any())).thenAnswer(invocacao -> invocacao.getArgument(0));
         when(patchPublisher.publicarBranch(any(), any(), any(), any(), any())).thenReturn("triagem/f1");
         when(board.abrirPullRequest(eq("acme/trade"), any()))
-                .thenReturn(new PullRequestRef("acme/trade", 77, "https://github.com/acme/trade/pull/77"));
+                .thenReturn(new PullRequestRef("acme/trade", 77, "https://github.com/acme/trade/pull/77", "PR_node"));
 
         service.concluir("job-1");
 
@@ -150,6 +151,65 @@ class TriageCompletionServiceTest {
         assertThat(estado.getAutoAttempts()).isEqualTo(1);
         assertThat(estado.getState()).isEqualTo(FingerprintState.EM_CORRECAO);
         verify(board).aplicarLabel(CARD, "decisao/proposta");
+    }
+
+    @Test
+    void autoFixHabilitaAutoMergeNoPullRequest() {
+        TriageJobEntity job = preparar();
+        prepararFingerprint();
+        when(resultReader.read(job)).thenReturn(resultado(true));
+        when(verifier.verificar(any(), any(), any(), anyInt())).thenReturn(fatos());
+        when(gate.decidir(any(), any())).thenReturn(
+                new GateDecision(Decision.AUTO_FIX, "clausula 10", "caso elegivel"));
+        when(decisionRepository.save(any())).thenAnswer(invocacao -> invocacao.getArgument(0));
+        when(patchPublisher.publicarBranch(any(), any(), any(), any(), any())).thenReturn("triagem/f1");
+        when(board.abrirPullRequest(eq("acme/trade"), any()))
+                .thenReturn(new PullRequestRef("acme/trade", 77, "u", "PR_node"));
+
+        service.concluir("job-1");
+
+        verify(board).habilitarAutoMerge(new PullRequestRef("acme/trade", 77, "u", "PR_node"));
+        verify(board).aplicarLabel(CARD, "decisao/auto-fix");
+        assertThat(job.getState()).isEqualTo(JobState.PUBLICADO);
+    }
+
+    @Test
+    void propostaNaoHabilitaAutoMerge() {
+        TriageJobEntity job = preparar();
+        prepararFingerprint();
+        when(resultReader.read(job)).thenReturn(resultado(true));
+        when(verifier.verificar(any(), any(), any(), anyInt())).thenReturn(fatos());
+        when(gate.decidir(any(), any())).thenReturn(
+                new GateDecision(Decision.PROPOSE_PATCH, "clausula 9", "severidade critica"));
+        when(decisionRepository.save(any())).thenAnswer(invocacao -> invocacao.getArgument(0));
+        when(patchPublisher.publicarBranch(any(), any(), any(), any(), any())).thenReturn("triagem/f1");
+        when(board.abrirPullRequest(eq("acme/trade"), any()))
+                .thenReturn(new PullRequestRef("acme/trade", 77, "u", "PR_node"));
+
+        service.concluir("job-1");
+
+        verify(board, never()).habilitarAutoMerge(any());
+    }
+
+    @Test
+    void autoMergeRecusadoDeixaOPrEsperandoHumano() {
+        TriageJobEntity job = preparar();
+        prepararFingerprint();
+        when(resultReader.read(job)).thenReturn(resultado(true));
+        when(verifier.verificar(any(), any(), any(), anyInt())).thenReturn(fatos());
+        when(gate.decidir(any(), any())).thenReturn(
+                new GateDecision(Decision.AUTO_FIX, "clausula 10", "caso elegivel"));
+        when(decisionRepository.save(any())).thenAnswer(invocacao -> invocacao.getArgument(0));
+        when(patchPublisher.publicarBranch(any(), any(), any(), any(), any())).thenReturn("triagem/f1");
+        when(board.abrirPullRequest(eq("acme/trade"), any()))
+                .thenReturn(new PullRequestRef("acme/trade", 77, "u", "PR_node"));
+        doThrow(new IllegalStateException("auto-merge desligado no repositorio"))
+                .when(board).habilitarAutoMerge(any());
+
+        service.concluir("job-1");
+
+        verify(board).aplicarLabel(CARD, "aguardando-humano");
+        assertThat(job.getState()).isEqualTo(JobState.PUBLICADO);
     }
 
     @Test

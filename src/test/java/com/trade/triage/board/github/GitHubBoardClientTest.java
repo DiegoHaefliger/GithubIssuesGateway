@@ -13,6 +13,7 @@ import org.springframework.web.client.RestClient;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.content;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.jsonPath;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
@@ -87,15 +88,47 @@ class GitHubBoardClientTest {
         server.expect(requestTo("https://api.github.com/repos/acme/trade/pulls"))
                 .andExpect(jsonPath("$.head").value("triagem/a3f9c2d1"))
                 .andExpect(jsonPath("$.base").value("master"))
-                .andRespond(withSuccess("{\"number\": 77, \"html_url\": \"https://github.com/acme/trade/pull/77\"}",
-                        MediaType.APPLICATION_JSON));
+                .andRespond(withSuccess("""
+                        {"number": 77, "html_url": "https://github.com/acme/trade/pull/77", "node_id": "PR_node"}
+                        """, MediaType.APPLICATION_JSON));
 
         PullRequestRef pr = client.abrirPullRequest("acme/trade",
                 new PullRequestContent("fix: preenche exitReason", "corpo", "triagem/a3f9c2d1", "master"));
 
         assertThat(pr.numero()).isEqualTo(77);
+        assertThat(pr.nodeId()).isEqualTo("PR_node");
         assertThat(pr.url()).isEqualTo("https://github.com/acme/trade/pull/77");
         server.verify();
+    }
+
+    @Test
+    void habilitaAutoMergePorGraphql() {
+        server.expect(requestTo("https://api.github.com/graphql"))
+                .andExpect(method(org.springframework.http.HttpMethod.POST))
+                .andExpect(jsonPath("$.variables.pullRequestId").value("PR_node"))
+                .andRespond(withSuccess("{\"data\": {\"enablePullRequestAutoMerge\": {}}}",
+                        MediaType.APPLICATION_JSON));
+
+        client.habilitarAutoMerge(new PullRequestRef("acme/trade", 77, "u", "PR_node"));
+
+        server.verify();
+    }
+
+    @Test
+    void erroDoGraphqlAoHabilitarAutoMergeViraFalha() {
+        server.expect(requestTo("https://api.github.com/graphql"))
+                .andRespond(withSuccess("{\"errors\": [{\"message\": \"auto-merge desabilitado\"}]}",
+                        MediaType.APPLICATION_JSON));
+
+        assertThatThrownBy(() -> client.habilitarAutoMerge(new PullRequestRef("acme/trade", 77, "u", "PR_node")))
+                .isInstanceOf(BoardOperationException.class)
+                .hasMessageContaining("auto-merge");
+    }
+
+    @Test
+    void pullRequestSemNodeIdNaoHabilitaAutoMerge() {
+        assertThatThrownBy(() -> client.habilitarAutoMerge(new PullRequestRef("acme/trade", 77, "u", null)))
+                .isInstanceOf(BoardOperationException.class);
     }
 
     @Test

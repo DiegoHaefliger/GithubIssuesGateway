@@ -26,4 +26,6 @@ public interface BoardClient {
     void reabrir(CardRef card);
 
     PullRequestRef abrirPullRequest(String repositorio, PullRequestContent conteudo);
+
+    void habilitarAutoMerge(PullRequestRef pullRequest);
 }
