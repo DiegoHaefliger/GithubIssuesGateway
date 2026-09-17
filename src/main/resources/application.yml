@@ -1,0 +1,71 @@
+spring:
+  application:
+    name: triage-gateway
+  datasource:
+    url: ${TRIAGE_DB_URL:jdbc:h2:mem:triage;DB_CLOSE_DELAY=-1}
+    username: ${TRIAGE_DB_USER:sa}
+    password: ${TRIAGE_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: ${TRIAGE_DB_DDL:update}
+    open-in-view: false
+
+server:
+  port: ${TRIAGE_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+logging:
+  level:
+    com.trade.triage: INFO
+
+triage:
+  registry:
+    origem: ${TRIAGE_REGISTRY_ORIGEM:ARQUIVO}
+    arquivo: ${TRIAGE_REGISTRY_ARQUIVO:config/projetos.json}
+    url: ${TRIAGE_REGISTRY_URL:}
+    recarga-intervalo: ${TRIAGE_REGISTRY_RECARGA:5m}
+    timeout: ${TRIAGE_REGISTRY_TIMEOUT:10s}
+  scrub:
+    campos-sensiveis: ${TRIAGE_SCRUB_SENSIVEIS:}
+    campos-conhecidos: ${TRIAGE_SCRUB_CONHECIDOS:}
+  grafana:
+    webhook-token: ${TRIAGE_GRAFANA_WEBHOOK_TOKEN:}
+    webhook-usuario: ${TRIAGE_GRAFANA_WEBHOOK_USUARIO:grafana}
+  github:
+    api-url: ${TRIAGE_GITHUB_API:https://api.github.com}
+    token: ${TRIAGE_GITHUB_TOKEN:}
+    webhook-secret: ${TRIAGE_GITHUB_WEBHOOK_SECRET:}
+    workflow-arquivo: ${TRIAGE_GITHUB_WORKFLOW:triage-runner.yml}
+    timeout: ${TRIAGE_GITHUB_TIMEOUT:20s}
+  evidencia:
+    diretorio: ${TRIAGE_EVIDENCIA_DIR:var/evidencia}
+  observabilidade:
+    loki-url: ${TRIAGE_LOKI_URL:http://localhost:3100}
+    prometheus-url: ${TRIAGE_PROMETHEUS_URL:http://localhost:9090}
+    grafana-url: ${TRIAGE_GRAFANA_URL:}
+    timeout: ${TRIAGE_OBS_TIMEOUT:15s}
+  kill-switch:
+    arquivo: ${TRIAGE_KILL_SWITCH_ARQUIVO:config/PARAR_TRIAGEM}
+    desligado-por-padrao: ${TRIAGE_KILL_SWITCH:false}
+  incidente:
+    arquivo: ${TRIAGE_INCIDENTE_ARQUIVO:config/INCIDENTE_ATIVO}
+  gate:
+    auto-fix-habilitado: ${TRIAGE_AUTO_FIX:false}
+  orquestrador:
+    maximo-de-jobs-simultaneos: ${TRIAGE_MAX_JOBS:2}
+    prazo-do-job: ${TRIAGE_PRAZO_JOB:30m}
+    intervalo-do-worker: ${TRIAGE_INTERVALO_WORKER:15s}
+    intervalo-do-watchdog: ${TRIAGE_INTERVALO_WATCHDOG:60s}
+    intervalo-da-avaliacao: ${TRIAGE_INTERVALO_AVALIACAO:20s}
+    intervalo-da-limpeza: ${TRIAGE_INTERVALO_LIMPEZA:6h}
+    polling-habilitado: ${TRIAGE_POLLING:false}
+    intervalo-do-polling: ${TRIAGE_INTERVALO_POLLING:5m}
+    url-publica: ${TRIAGE_URL_PUBLICA:}
+  verificacao:
+    diretorio-de-trabalho: ${TRIAGE_WORKTREE_DIR:var/worktrees}
+    timeout-da-suite: ${TRIAGE_TIMEOUT_SUITE:20m}

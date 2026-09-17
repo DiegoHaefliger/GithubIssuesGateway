@@ -1,0 +1,9 @@
+target/
+*.class
+.idea/
+*.iml
+.vscode/
+.DS_Store
+var/
+config/PARAR_TRIAGEM
+config/INCIDENTE_ATIVO
