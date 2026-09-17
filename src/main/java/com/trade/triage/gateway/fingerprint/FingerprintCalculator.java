@@ -28,9 +28,14 @@ public class FingerprintCalculator {
         String material = String.join(SEPARADOR,
                 nullSafe(signal.service()),
                 nullSafe(signal.exceptionClass()),
-                frameSelector.topFrameDoProjeto(signal.stacktrace(), projeto.pacotesRaiz()),
+                onde(signal, projeto),
                 normalizer.normalize(signal.message()));
         return HexFormat.of().formatHex(digest(material)).substring(0, TAMANHO_HEX);
+    }
+
+    private String onde(ErrorSignal signal, ProjectEntry projeto) {
+        return signal.localizacaoOpcional()
+                .orElseGet(() -> frameSelector.topFrameDoProjeto(signal.stacktrace(), projeto.pacotesRaiz()));
     }
 
     private byte[] digest(String material) {

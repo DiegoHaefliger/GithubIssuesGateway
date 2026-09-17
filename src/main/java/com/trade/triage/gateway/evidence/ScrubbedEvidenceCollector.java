@@ -57,7 +57,7 @@ public class ScrubbedEvidenceCollector implements EvidenceCollector {
 
         List<String> commits = commitHistory.commitsRecentes(projeto, JANELA_COMMITS);
         if (commits.isEmpty()) {
-            lacunas.add("historico de commits indisponivel em " + projeto.diretorio());
+            lacunas.add("historico de commits indisponivel em " + projeto.repositorio());
         }
 
         List<String> deploys = deploymentHistory.deploysRecentes(projeto, signal.env(), JANELA_DEPLOYS);

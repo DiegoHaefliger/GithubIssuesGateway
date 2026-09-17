@@ -11,11 +11,15 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public class ProjectWorkspace implements AutoCloseable {
 
     private static final Logger LOG = LoggerFactory.getLogger(ProjectWorkspace.class);
     private static final Duration TIMEOUT_DE_GIT = Duration.ofMinutes(5);
+    // O git ecoa a URL da remote (com credencial) na propria mensagem de erro
+    // de rede/auth — mesmo formato que GitHubCloneUrls gera.
+    private static final Pattern URL_COM_CREDENCIAL = Pattern.compile("https://x-access-token:[^@\\s]+@");
 
     private final Path raiz;
     private final CommandRunner runner;
@@ -25,16 +29,24 @@ public class ProjectWorkspace implements AutoCloseable {
         this.runner = runner;
     }
 
-    public static ProjectWorkspace clonar(ProjectEntry projeto, Path diretorioBase, CommandRunner runner) {
+    /**
+     * {@code origemDeClone} e' a URL remota (autenticada, ver {@code GitHubCloneUrls}), nunca um
+     * caminho local: o gateway roda em deployable proprio, sem acesso ao disco de quem hospeda os
+     * repositorios monitorados. Raso (--depth 1) porque so' o HEAD da branch base interessa —
+     * nem verificacao nem publicacao de patch precisam de historico.
+     */
+    public static ProjectWorkspace clonar(
+            ProjectEntry projeto, String origemDeClone, Path diretorioBase, CommandRunner runner) {
         try {
             Files.createDirectories(diretorioBase);
             Path destino = Files.createTempDirectory(diretorioBase, projeto.projeto() + "-");
             CommandResult clone = runner.run(
-                    List.of("git", "clone", "--local", "--no-hardlinks", "--branch", projeto.branchBase(),
-                            projeto.diretorio(), destino.toString()),
+                    List.of("git", "clone", "--depth", "1", "--branch", projeto.branchBase(),
+                            origemDeClone, destino.toString()),
                     diretorioBase, TIMEOUT_DE_GIT);
             if (!clone.sucesso()) {
-                throw new VerificationException("Falha ao clonar " + projeto.diretorio() + ": " + clone.saida());
+                throw new VerificationException(
+                        "Falha ao clonar " + projeto.repositorio() + ": " + semCredencial(clone.saida()));
             }
             return new ProjectWorkspace(destino, runner);
         } catch (IOException exception) {
@@ -44,6 +56,10 @@ public class ProjectWorkspace implements AutoCloseable {
 
     public Path raiz() {
         return raiz;
+    }
+
+    private static String semCredencial(String texto) {
+        return URL_COM_CREDENCIAL.matcher(texto).replaceAll("https://x-access-token:[REDIGIDO]@");
     }
 
     public boolean aplicar(String diff) {

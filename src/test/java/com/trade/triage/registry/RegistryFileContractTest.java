@@ -23,7 +23,8 @@ class RegistryFileContractTest {
 
         assertThat(registry.version()).isNotEqualTo("vazio");
         assertThat(registry.snapshot().projetos()).hasSize(3);
-        assertThat(registry.findByServiceAndEnv("trade-backend", "producao")).isPresent();
+        // O servico e' o `quarkus.otel.service.name` que chega no Loki, nao o nome do projeto.
+        assertThat(registry.findByServiceAndEnv("crypto-alerts-java", "producao")).isPresent();
         assertThat(registry.findByServiceAndEnv("crypto-monitor", "producao")).isEmpty();
     }
 }

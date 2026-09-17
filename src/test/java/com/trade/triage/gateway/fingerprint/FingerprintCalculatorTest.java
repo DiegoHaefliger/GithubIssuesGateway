@@ -55,7 +55,7 @@ class FingerprintCalculatorTest {
         ErrorSignal breaker = sinal("Falha ao fechar posicao 1");
         ErrorSignal guard = new ErrorSignal("trade-backend", "producao", "r1", "critical", "t1",
                 "com.trade.risk.StopLossGuard", "java.lang.NullPointerException",
-                STACK_OUTRO_CAMINHO, "Falha ao fechar posicao 1", null, Instant.EPOCH);
+                STACK_OUTRO_CAMINHO, "Falha ao fechar posicao 1", null, Instant.EPOCH, null);
 
         assertThat(calculator.calculate(breaker, projeto)).isNotEqualTo(calculator.calculate(guard, projeto));
     }
@@ -64,7 +64,7 @@ class FingerprintCalculatorTest {
     void servicosDiferentesNaoColidem() {
         ErrorSignal outroServico = new ErrorSignal("trade-worker", "producao", "r1", "critical", "t1",
                 "com.trade.execution.ExitReasonResolver", "java.lang.NullPointerException",
-                STACK_BREAKER, "Falha ao fechar posicao 1", null, Instant.EPOCH);
+                STACK_BREAKER, "Falha ao fechar posicao 1", null, Instant.EPOCH, null);
 
         assertThat(calculator.calculate(sinal("Falha ao fechar posicao 1"), projeto))
                 .isNotEqualTo(calculator.calculate(outroServico, projeto));
@@ -75,14 +75,40 @@ class FingerprintCalculatorTest {
         ErrorSignal semFrame = new ErrorSignal("trade-backend", "producao", "r1", "critical", "t1",
                 "com.trade.X", "java.lang.NullPointerException",
                 "    at io.quarkus.arc.impl.InterceptorInvocation.invoke(InterceptorInvocation.java:41)",
-                "boom", null, Instant.EPOCH);
+                "boom", null, Instant.EPOCH, null);
 
         assertThat(calculator.calculate(semFrame, projeto)).hasSize(16);
+    }
+
+    @Test
+    void erroDeFrontSeparaPorTelaMesmoSemFrameDoProjeto() {
+        ErrorSignal relstr = front("/estrategias/relstr@PainelRelstr");
+        ErrorSignal posicoes = front("/posicoes@PositionsPage");
+
+        assertThat(calculator.calculate(relstr, projeto)).isNotEqualTo(calculator.calculate(posicoes, projeto));
+    }
+
+    @Test
+    void erroDeFrontNaMesmaTelaColideEntreDeploysDiferentes() {
+        ErrorSignal antes = front("/posicoes@PositionsPage", "at a (index-4f2a.js:1:88213)");
+        ErrorSignal depois = front("/posicoes@PositionsPage", "at q (index-9c71.js:1:41002)");
+
+        assertThat(calculator.calculate(antes, projeto)).isEqualTo(calculator.calculate(depois, projeto));
+    }
+
+    private ErrorSignal front(String localizacao) {
+        return front(localizacao, "at a (index-4f2a.js:1:88213)");
+    }
+
+    private ErrorSignal front(String localizacao, String stack) {
+        return new ErrorSignal("tradefront", "producao", "r-front", "critical", "t1",
+                "tradefront", "TypeError", stack, "x is not a function", null, Instant.EPOCH,
+                localizacao);
     }
 
     private ErrorSignal sinal(String message) {
         return new ErrorSignal("trade-backend", "producao", "r1", "critical", "t1",
                 "com.trade.execution.ExitReasonResolver", "java.lang.NullPointerException",
-                STACK_BREAKER, message, null, Instant.EPOCH);
+                STACK_BREAKER, message, null, Instant.EPOCH, null);
     }
 }
