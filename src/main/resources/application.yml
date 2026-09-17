@@ -39,3 +39,15 @@ triage:
     webhook-secret: ${TRIAGE_GITHUB_WEBHOOK_SECRET:}
     workflow-arquivo: ${TRIAGE_GITHUB_WORKFLOW:triage-runner.yml}
     timeout: ${TRIAGE_GITHUB_TIMEOUT:20s}
+  evidencia:
+    diretorio: ${TRIAGE_EVIDENCIA_DIR:var/evidencia}
+  observabilidade:
+    loki-url: ${TRIAGE_LOKI_URL:http://localhost:3100}
+    prometheus-url: ${TRIAGE_PROMETHEUS_URL:http://localhost:9090}
+    grafana-url: ${TRIAGE_GRAFANA_URL:}
+    timeout: ${TRIAGE_OBS_TIMEOUT:15s}
+  kill-switch:
+    arquivo: ${TRIAGE_KILL_SWITCH_ARQUIVO:config/PARAR_TRIAGEM}
+    desligado-por-padrao: ${TRIAGE_KILL_SWITCH:false}
+  incidente:
+    arquivo: ${TRIAGE_INCIDENTE_ARQUIVO:config/INCIDENTE_ATIVO}
