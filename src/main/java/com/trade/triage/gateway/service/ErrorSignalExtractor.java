@@ -28,7 +28,8 @@ public class ErrorSignalExtractor {
                 alerta.annotation("stacktrace"),
                 alerta.annotation("message"),
                 alerta.generatorUrl(),
-                momento(alerta));
+                momento(alerta),
+                alerta.annotation("localizacao"));
     }
 
     private Instant momento(GrafanaAlert alerta) {

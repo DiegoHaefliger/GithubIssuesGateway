@@ -1,5 +1,6 @@
 package com.trade.triage.orchestrator.publish;
 
+import com.trade.triage.board.github.GitHubCloneUrls;
 import com.trade.triage.board.github.GitHubProperties;
 import com.trade.triage.gate.GateDecision;
 import com.trade.triage.gate.verification.CommandResult;
@@ -29,25 +30,29 @@ public class GitPatchPublisher implements PatchPublisher {
     private final GitHubProperties githubProperties;
     private final CommitMessageBuilder commitMessageBuilder;
     private final SecretScrubber scrubber;
+    private final GitHubCloneUrls cloneUrls;
 
     public GitPatchPublisher(CommandRunner runner,
                              VerificationProperties properties,
                              GitHubProperties githubProperties,
                              CommitMessageBuilder commitMessageBuilder,
-                             SecretScrubber scrubber) {
+                             SecretScrubber scrubber,
+                             GitHubCloneUrls cloneUrls) {
         this.runner = runner;
         this.properties = properties;
         this.githubProperties = githubProperties;
         this.commitMessageBuilder = commitMessageBuilder;
         this.scrubber = scrubber;
+        this.cloneUrls = cloneUrls;
     }
 
     @Override
     public String publicarBranch(TriageJobEntity job, ProjectEntry projeto, TriageResult resultado,
                                  GateDecision decisao, BlastRadius blastRadius) {
         String branch = PREFIXO_DA_BRANCH + job.getFingerprint();
+        String origem = cloneUrls.de(projeto);
         try (ProjectWorkspace worktree = ProjectWorkspace.clonar(
-                projeto, Path.of(properties.diretorioDeTrabalho()), runner)) {
+                projeto, origem, Path.of(properties.diretorioDeTrabalho()), runner)) {
 
             executar(worktree, List.of("git", "checkout", "-b", branch), "criar branch");
             if (!worktree.aplicar(resultado.diff())) {
@@ -56,15 +61,10 @@ public class GitPatchPublisher implements PatchPublisher {
             executar(worktree, List.of("git", "add", "--all"), "preparar arquivos");
             executar(worktree, List.of("git", "commit", "-m",
                     commitMessageBuilder.build(job, resultado, decisao, blastRadius)), "commitar");
-            executar(worktree, List.of("git", "push", urlComCredencial(projeto), branch, "--force-with-lease"),
+            executar(worktree, List.of("git", "push", origem, branch, "--force-with-lease"),
                     "publicar branch no repositorio remoto");
             return branch;
         }
-    }
-
-    private String urlComCredencial(ProjectEntry projeto) {
-        return "https://x-access-token:%s@github.com/%s.git"
-                .formatted(githubProperties.token(), projeto.repositorio());
     }
 
     private String limpar(String saida) {

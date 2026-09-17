@@ -161,18 +161,18 @@ class ScrubbedEvidenceCollectorTest {
 
         EvidencePackage pacote = collector.collect(sinal("t1"), projeto, "f1");
 
-        assertThat(pacote.lacunas()).anyMatch(lacuna -> lacuna.contains("/tmp/trade"));
+        assertThat(pacote.lacunas()).anyMatch(lacuna -> lacuna.contains("acme/trade"));
     }
 
     private ErrorSignal sinal(String traceId) {
         return new ErrorSignal("trade-backend", "producao", "r1", "critical", traceId,
                 "com.trade.X", "java.lang.NullPointerException", "at com.trade.X.y(X.java:1)",
-                "boom", "https://grafana/d/painel", AGORA);
+                "boom", "https://grafana/d/painel", AGORA, null);
     }
 
     private ErrorSignal sinalComSegredo() {
         return new ErrorSignal("trade-backend", "producao", "r1", "critical", "t1",
                 "com.trade.X", "java.lang.NullPointerException",
-                "at com.trade.X.y(X.java:1) chave sk_live_ABCdef123456789", "boom", "https://grafana/d/painel", AGORA);
+                "at com.trade.X.y(X.java:1) chave sk_live_ABCdef123456789", "boom", "https://grafana/d/painel", AGORA, null);
     }
 }

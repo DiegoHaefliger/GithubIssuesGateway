@@ -1,5 +1,6 @@
 package com.trade.triage.gate.verification;
 
+import com.trade.triage.board.github.GitHubCloneUrls;
 import com.trade.triage.gate.GateFacts;
 import com.trade.triage.orchestrator.result.ProposedTest;
 import com.trade.triage.orchestrator.result.TriageResult;
@@ -51,6 +52,9 @@ class GateFactsVerifierTest {
 
     @Mock
     private CommandRunner commandRunner;
+
+    @Mock
+    private GitHubCloneUrls cloneUrls;
 
     @Test
     void semDiffNaoRodaNadaEOsTestesSaoFatoNegativo() {
@@ -107,7 +111,7 @@ class GateFactsVerifierTest {
     void incidenteAtivoEntraNosFatos() {
         GateFactsVerifier comIncidente = new GateFactsVerifier(new DiffAnalyzer(), new PathPolicy(), commandRunner,
                 new IncidentWindow(new IncidentWindowProperties("pom.xml")),
-                new VerificationProperties("build/worktrees", Duration.ofMinutes(1)));
+                new VerificationProperties("build/worktrees", Duration.ofMinutes(1)), cloneUrls);
 
         assertThat(comIncidente.verificar(resultado(DIFF_SOMENTE_FONTE, null), projeto, "warning", 0)
                 .incidenteAtivo()).isTrue();
@@ -116,7 +120,7 @@ class GateFactsVerifierTest {
     private GateFactsVerifier verifier() {
         return new GateFactsVerifier(new DiffAnalyzer(), new PathPolicy(), commandRunner,
                 new IncidentWindow(new IncidentWindowProperties("build/nao-existe")),
-                new VerificationProperties("build/worktrees", Duration.ofMinutes(1)));
+                new VerificationProperties("build/worktrees", Duration.ofMinutes(1)), cloneUrls);
     }
 
     private TriageResult resultado(String diff, ProposedTest teste) {

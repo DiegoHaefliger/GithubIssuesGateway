@@ -1,5 +1,6 @@
 package com.trade.triage.gate.verification;
 
+import com.trade.triage.board.github.GitHubCloneUrls;
 import com.trade.triage.gate.GateFacts;
 import com.trade.triage.orchestrator.result.TriageResult;
 import com.trade.triage.registry.PathPolicy;
@@ -35,14 +36,17 @@ public class GateFactsVerifier {
     private final CommandRunner commandRunner;
     private final IncidentWindow incidentWindow;
     private final VerificationProperties properties;
+    private final GitHubCloneUrls cloneUrls;
 
     public GateFactsVerifier(DiffAnalyzer diffAnalyzer, PathPolicy pathPolicy, CommandRunner commandRunner,
-                             IncidentWindow incidentWindow, VerificationProperties properties) {
+                             IncidentWindow incidentWindow, VerificationProperties properties,
+                             GitHubCloneUrls cloneUrls) {
         this.diffAnalyzer = diffAnalyzer;
         this.pathPolicy = pathPolicy;
         this.commandRunner = commandRunner;
         this.incidentWindow = incidentWindow;
         this.properties = properties;
+        this.cloneUrls = cloneUrls;
     }
 
     public GateFacts verificar(TriageResult resultado, ProjectEntry projeto, String severidade, int autoAttempts) {
@@ -79,7 +83,7 @@ public class GateFactsVerifier {
         }
 
         try (ProjectWorkspace worktree = ProjectWorkspace.clonar(
-                projeto, Path.of(properties.diretorioDeTrabalho()), commandRunner)) {
+                projeto, cloneUrls.de(projeto), Path.of(properties.diretorioDeTrabalho()), commandRunner)) {
             if (!worktree.aplicar(diffDoTeste)) {
                 return new TestOutcome(false, false);
             }

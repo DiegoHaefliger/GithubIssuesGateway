@@ -122,6 +122,7 @@ public class CardContentBuilder {
 
                 ## Sintoma
                 - Excecao: `%s`
+                - Onde: `%s`
                 - Mensagem: %s
 
                 ```
@@ -151,6 +152,7 @@ public class CardContentBuilder {
                 estado.getFirstSeen(),
                 estado.getLastSeen(),
                 textoOuTraco(signal.exceptionClass()),
+                textoOuTraco(signal.localizacao()),
                 scrubber.scrubText(textoOuTraco(signal.message())),
                 recorte(evidencia.stacktrace()),
                 contexto(evidencia),
