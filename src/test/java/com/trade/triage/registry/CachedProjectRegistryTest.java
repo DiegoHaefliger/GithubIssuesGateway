@@ -25,6 +25,7 @@ class CachedProjectRegistryTest {
                   "pacotes_raiz": ["com.acme.trade"],
                   "repositorio": "acme/trade",
                   "branch_base": "master",
+                  "comando_de_teste": ["mvn", "-B", "test"],
                   "ambientes": ["producao"],
                   "board": "acme/trade",
                   "allowlist": ["src/main/java/**/parser/**"],

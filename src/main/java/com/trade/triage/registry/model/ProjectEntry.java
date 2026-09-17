@@ -16,6 +16,7 @@ public record ProjectEntry(
         @JsonProperty("pacotes_raiz") @NotEmpty List<String> pacotesRaiz,
         @JsonProperty("repositorio") @NotBlank String repositorio,
         @JsonProperty("branch_base") @NotBlank String branchBase,
+        @JsonProperty("comando_de_teste") @NotEmpty List<String> comandoDeTeste,
         @JsonProperty("ambientes") @NotEmpty List<String> ambientes,
         @JsonProperty("board") @NotBlank String board,
         @JsonProperty("allowlist") @NotNull List<String> allowlist,
@@ -28,6 +29,7 @@ public record ProjectEntry(
         pacotesRaiz = pacotesRaiz == null ? List.of() : List.copyOf(pacotesRaiz);
         ambientes = ambientes == null ? List.of() : List.copyOf(ambientes);
         allowlist = allowlist == null ? List.of() : List.copyOf(allowlist);
+        comandoDeTeste = comandoDeTeste == null ? List.of() : List.copyOf(comandoDeTeste);
         blastRadius = blastRadius == null ? Map.of() : Map.copyOf(blastRadius);
         limites = limites == null ? ProjectLimits.conservador() : limites;
     }

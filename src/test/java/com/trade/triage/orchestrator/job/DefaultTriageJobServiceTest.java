@@ -42,7 +42,7 @@ class DefaultTriageJobServiceTest {
     private static final String CARD = "acme/trade#123";
 
     private final ProjectEntry projeto = new ProjectEntry(
-            "trade", "/tmp/trade", List.of("trade-backend"), List.of("com.trade"), "acme/trade", "master",
+            "trade", "/tmp/trade", List.of("trade-backend"), List.of("com.trade"), "acme/trade", "master", List.of("mvn", "test"),
             List.of("producao"), "acme/trade", List.of(), Map.of(), ProjectLimits.conservador(), true);
 
     @Mock

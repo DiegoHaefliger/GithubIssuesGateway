@@ -59,3 +59,6 @@ triage:
     intervalo-do-worker: ${TRIAGE_INTERVALO_WORKER:15s}
     intervalo-do-watchdog: ${TRIAGE_INTERVALO_WATCHDOG:60s}
     url-publica: ${TRIAGE_URL_PUBLICA:}
+  verificacao:
+    diretorio-de-trabalho: ${TRIAGE_WORKTREE_DIR:var/worktrees}
+    timeout-da-suite: ${TRIAGE_TIMEOUT_SUITE:20m}

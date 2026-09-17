@@ -15,7 +15,7 @@ class PathPolicyTest {
     private final PathPolicy policy = new PathPolicy();
 
     private final ProjectEntry projeto = new ProjectEntry(
-            "trade", "/tmp/trade", List.of("trade-backend"), List.of("com.acme"), "acme/trade", "master",
+            "trade", "/tmp/trade", List.of("trade-backend"), List.of("com.acme"), "acme/trade", "master", List.of("mvn", "test"),
             List.of("producao"), "acme/trade",
             List.of("src/main/java/**/parser/**"),
             Map.of("src/main/java/**/parser/**", BlastRadius.BAIXO,
@@ -53,7 +53,7 @@ class PathPolicyTest {
     @Test
     void allowlistVaziaNaoElegeNada() {
         ProjectEntry semAllowlist = new ProjectEntry(
-                "x", "/tmp/x", List.of("x"), List.of("com.acme"), "acme/x", "main", List.of("producao"), "acme/x",
+                "x", "/tmp/x", List.of("x"), List.of("com.acme"), "acme/x", "main", List.of("mvn", "test"), List.of("producao"), "acme/x",
                 List.of(), Map.of(), ProjectLimits.conservador(), true);
 
         assertThat(policy.dentroDaAllowlist(semAllowlist, "src/Any.java")).isFalse();

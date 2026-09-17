@@ -32,7 +32,7 @@ class FingerprintCalculatorTest {
 
     private final ProjectEntry projeto = new ProjectEntry(
             "trade", "/tmp/trade", List.of("trade-backend"), List.of("com.trade"), "acme/trade",
-            "master", List.of("producao"), "acme/trade", List.of(), Map.of(),
+            "master", List.of("mvn", "test"), List.of("producao"), "acme/trade", List.of(), Map.of(),
             ProjectLimits.conservador(), true);
 
     @Test

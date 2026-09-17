@@ -25,7 +25,7 @@ class CardRateLimiterTest {
     private static final Instant AGORA = Instant.parse("2026-09-17T12:00:00Z");
 
     private final ProjectEntry projeto = new ProjectEntry(
-            "trade", "/tmp/trade", List.of("trade-backend"), List.of("com.trade"), "acme/trade", "master",
+            "trade", "/tmp/trade", List.of("trade-backend"), List.of("com.trade"), "acme/trade", "master", List.of("mvn", "test"),
             List.of("producao"), "acme/trade", List.of(), Map.of(),
             new ProjectLimits(50, 3, 2, 10), true);
 
