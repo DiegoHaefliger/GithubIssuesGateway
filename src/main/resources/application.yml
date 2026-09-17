@@ -51,3 +51,5 @@ triage:
     desligado-por-padrao: ${TRIAGE_KILL_SWITCH:false}
   incidente:
     arquivo: ${TRIAGE_INCIDENTE_ARQUIVO:config/INCIDENTE_ATIVO}
+  gate:
+    auto-fix-habilitado: ${TRIAGE_AUTO_FIX:false}
