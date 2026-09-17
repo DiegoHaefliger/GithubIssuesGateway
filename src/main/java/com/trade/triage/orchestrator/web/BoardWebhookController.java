@@ -7,6 +7,7 @@ import com.trade.triage.gateway.service.CardContentBuilder;
 import com.trade.triage.orchestrator.job.JobEnqueueOutcome;
 import com.trade.triage.orchestrator.job.JobEnqueueResult;
 import com.trade.triage.orchestrator.job.TriageJobService;
+import com.trade.triage.orchestrator.outcome.OutcomeService;
 import com.trade.triage.shared.exception.InvalidPayloadException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 @RestController
 @RequestMapping("/webhooks/board")
@@ -24,16 +27,21 @@ public class BoardWebhookController {
 
     private static final String EVENTO_ISSUES = "issues";
     private static final String EVENTO_COMENTARIO = "issue_comment";
+    private static final String EVENTO_PULL_REQUEST = "pull_request";
+    private static final String EVENTO_PUSH = "push";
 
     private final WebhookSignatureVerifier verifier;
     private final TriageJobService jobService;
+    private final OutcomeService outcomeService;
     private final ObjectMapper objectMapper;
 
     public BoardWebhookController(WebhookSignatureVerifier verifier,
                                   TriageJobService jobService,
+                                  OutcomeService outcomeService,
                                   ObjectMapper objectMapper) {
         this.verifier = verifier;
         this.jobService = jobService;
+        this.outcomeService = outcomeService;
         this.objectMapper = objectMapper;
     }
 
@@ -49,12 +57,39 @@ public class BoardWebhookController {
         return ResponseEntity.status(HttpStatus.ACCEPTED).body(switch (evento) {
             case EVENTO_ISSUES -> tratarIssue(corpo);
             case EVENTO_COMENTARIO -> tratarComentario(corpo);
+            case EVENTO_PULL_REQUEST -> tratarPullRequest(corpo);
+            case EVENTO_PUSH -> tratarPush(corpo);
             default -> JobEnqueueResult.recusado(JobEnqueueOutcome.CARD_DESCONHECIDO,
                     "evento ignorado: " + evento);
         });
     }
 
+    private JobEnqueueResult tratarPullRequest(JsonNode corpo) {
+        if (!"closed".equals(texto(corpo, "action"))) {
+            return ignorado("acao de pull request ignorada: " + texto(corpo, "action"));
+        }
+        String repositorio = corpo.path("repository").path("full_name").asText("");
+        int numero = corpo.path("pull_request").path("number").asInt(-1);
+        if (repositorio.isBlank() || numero < 0) {
+            throw new InvalidPayloadException("Webhook de pull request sem repositorio ou numero");
+        }
+        outcomeService.registrarPullRequestFechado(repositorio + "#" + numero,
+                corpo.path("pull_request").path("merged").asBoolean(false));
+        return registrado("desfecho do pull request registrado");
+    }
+
+    private JobEnqueueResult tratarPush(JsonNode corpo) {
+        List<String> mensagens = new ArrayList<>();
+        corpo.path("commits").forEach(commit -> mensagens.add(commit.path("message").asText("")));
+        outcomeService.registrarReversoes(mensagens);
+        return registrado("push avaliado para reversao");
+    }
+
     private JobEnqueueResult tratarIssue(JsonNode corpo) {
+        if ("closed".equals(texto(corpo, "action"))) {
+            outcomeService.registrarCardFechado(cardRef(corpo));
+            return registrado("card fechado, fingerprint resolvido");
+        }
         if (!"labeled".equals(texto(corpo, "action"))) {
             return ignorado("acao de issue ignorada: " + texto(corpo, "action"));
         }
@@ -82,6 +117,10 @@ public class BoardWebhookController {
             throw new InvalidPayloadException("Webhook sem repository.full_name ou issue.number");
         }
         return repositorio + "#" + numero;
+    }
+
+    private JobEnqueueResult registrado(String motivo) {
+        return JobEnqueueResult.recusado(JobEnqueueOutcome.EVENTO_REGISTRADO, motivo);
     }
 
     private JobEnqueueResult ignorado(String motivo) {

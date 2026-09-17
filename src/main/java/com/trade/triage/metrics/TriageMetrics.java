@@ -3,6 +3,7 @@ package com.trade.triage.metrics;
 import com.trade.triage.persistence.entity.Decision;
 import com.trade.triage.persistence.entity.FingerprintState;
 import com.trade.triage.persistence.entity.JobState;
+import com.trade.triage.persistence.entity.Outcome;
 import com.trade.triage.persistence.repository.DecisionRecordRepository;
 import com.trade.triage.persistence.repository.FingerprintRepository;
 import com.trade.triage.persistence.repository.TriageJobRepository;
@@ -50,6 +51,14 @@ public class TriageMetrics {
         Counter.builder("triagem.decisoes")
                 .tag("decisao", decisao.name())
                 .tag("regra", regra)
+                .register(meterRegistry)
+                .increment();
+    }
+
+    public void contarDesfecho(Outcome desfecho, Decision decisao) {
+        Counter.builder("triagem.desfechos")
+                .tag("desfecho", desfecho.name())
+                .tag("decisao", decisao.name())
                 .register(meterRegistry)
                 .increment();
     }

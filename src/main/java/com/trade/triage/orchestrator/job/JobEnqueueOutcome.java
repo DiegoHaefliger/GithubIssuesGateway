@@ -2,6 +2,7 @@ package com.trade.triage.orchestrator.job;
 
 public enum JobEnqueueOutcome {
     ENFILEIRADO,
+    EVENTO_REGISTRADO,
     JA_EXISTE_JOB_ATIVO,
     CARD_DESCONHECIDO,
     PROJETO_FORA_DO_REGISTRO,

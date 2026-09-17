@@ -3,6 +3,7 @@ package com.trade.triage.orchestrator.web;
 import com.trade.triage.board.github.WebhookSignatureVerifier;
 import com.trade.triage.orchestrator.job.JobEnqueueResult;
 import com.trade.triage.orchestrator.job.TriageJobService;
+import com.trade.triage.orchestrator.outcome.OutcomeService;
 import com.trade.triage.shared.exception.UnauthorizedException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +11,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -51,6 +54,9 @@ class BoardWebhookControllerTest {
     @MockitoBean
     private TriageJobService jobService;
 
+    @MockitoBean
+    private OutcomeService outcomeService;
+
     @Test
     void labelAutoTriageEnfileiraJob() throws Exception {
         when(jobService.enfileirar("acme/trade#123", "issues.labeled"))
@@ -89,6 +95,54 @@ class BoardWebhookControllerTest {
     }
 
     @Test
+    void pullRequestMergedRegistraDesfecho() throws Exception {
+        mockMvc.perform(webhook("pull_request", """
+                        {
+                          "action": "closed",
+                          "pull_request": {"number": 77, "merged": true},
+                          "repository": {"full_name": "acme/trade"}
+                        }
+                        """))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.resultado").value("EVENTO_REGISTRADO"));
+
+        verify(outcomeService).registrarPullRequestFechado("acme/trade#77", true);
+    }
+
+    @Test
+    void pullRequestFechadoSemMergeRegistraDesfecho() throws Exception {
+        mockMvc.perform(webhook("pull_request", """
+                        {
+                          "action": "closed",
+                          "pull_request": {"number": 77, "merged": false},
+                          "repository": {"full_name": "acme/trade"}
+                        }
+                        """))
+                .andExpect(status().isAccepted());
+
+        verify(outcomeService).registrarPullRequestFechado("acme/trade#77", false);
+    }
+
+    @Test
+    void cardFechadoRegistraResolucao() throws Exception {
+        mockMvc.perform(webhook("issues", LABELED.replace("\"labeled\"", "\"closed\"")))
+                .andExpect(status().isAccepted());
+
+        verify(outcomeService).registrarCardFechado("acme/trade#123");
+        verify(jobService, never()).enfileirar(anyString(), anyString());
+    }
+
+    @Test
+    void pushEncaminhaMensagensDeCommitParaDeteccaoDeReversao() throws Exception {
+        mockMvc.perform(webhook("push", """
+                        {"commits": [{"message": "Revert \\"fix: x\\"\\n\\nFingerprint: f1"}]}
+                        """))
+                .andExpect(status().isAccepted());
+
+        verify(outcomeService).registrarReversoes(List.of("Revert \"fix: x\"\n\nFingerprint: f1"));
+    }
+
+    @Test
     void assinaturaInvalidaEhRecusada() throws Exception {
         doThrow(new UnauthorizedException("Assinatura do webhook nao confere"))
                 .when(verifier).verify(anyString(), any());
@@ -109,7 +163,7 @@ class BoardWebhookControllerTest {
 
     @Test
     void eventoDesconhecidoEhIgnorado() throws Exception {
-        mockMvc.perform(webhook("push", "{}"))
+        mockMvc.perform(webhook("star", "{}"))
                 .andExpect(status().isAccepted());
 
         verify(jobService, never()).enfileirar(anyString(), anyString());
