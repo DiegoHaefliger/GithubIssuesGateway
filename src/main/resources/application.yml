@@ -53,3 +53,9 @@ triage:
     arquivo: ${TRIAGE_INCIDENTE_ARQUIVO:config/INCIDENTE_ATIVO}
   gate:
     auto-fix-habilitado: ${TRIAGE_AUTO_FIX:false}
+  orquestrador:
+    maximo-de-jobs-simultaneos: ${TRIAGE_MAX_JOBS:2}
+    prazo-do-job: ${TRIAGE_PRAZO_JOB:30m}
+    intervalo-do-worker: ${TRIAGE_INTERVALO_WORKER:15s}
+    intervalo-do-watchdog: ${TRIAGE_INTERVALO_WATCHDOG:60s}
+    url-publica: ${TRIAGE_URL_PUBLICA:}
