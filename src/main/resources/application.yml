@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: triage-gateway
+  datasource:
+    url: ${TRIAGE_DB_URL:jdbc:h2:mem:triage;DB_CLOSE_DELAY=-1}
+    username: ${TRIAGE_DB_USER:sa}
+    password: ${TRIAGE_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: ${TRIAGE_DB_DDL:update}
+    open-in-view: false
+
+server:
+  port: ${TRIAGE_PORT:8080}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+logging:
+  level:
+    com.trade.triage: INFO
