@@ -67,7 +67,8 @@ Variáveis principais:
 | Variável | Para que serve |
 |---|---|
 | `TRIAGE_GITHUB_TOKEN` | escrita no board, disparo do workflow e push da branch |
-| `TRIAGE_GITHUB_WEBHOOK_SECRET` | verificação HMAC dos webhooks recebidos |
+| `TRIAGE_GITHUB_WEBHOOK_SECRET` | HMAC dos webhooks do board e do contexto/sinal do runner |
+| `TRIAGE_GRAFANA_WEBHOOK_TOKEN` | credencial do webhook do Grafana; **sem ela nenhum alerta entra** |
 | `TRIAGE_REGISTRY_ARQUIVO` / `TRIAGE_REGISTRY_URL` | origem do registro de escopo |
 | `TRIAGE_LOKI_URL`, `TRIAGE_PROMETHEUS_URL` | coleta de evidência |
 | `TRIAGE_URL_PUBLICA` | URL que o runner usa para sinalizar conclusão |
@@ -79,11 +80,17 @@ Variáveis principais:
 | Rota | Origem | O que faz |
 |---|---|---|
 | `POST /webhooks/grafana` | Grafana | ingere alertas, deduplica e abre o card |
+| `GET /jobs/{jobId}/contexto` | GitHub Actions | entrega card e evidência ao runner, que não tem credencial |
 | `POST /webhooks/board` | GitHub | `issues.labeled` e `issue_comment.created` enfileiram job |
 | `POST /webhooks/runner/{jobId}` | GitHub Actions | apenas sinaliza o fim; o resultado é puxado depois |
 | `GET /actuator/metrics` | operação | métricas do §9 |
 
 Nenhum handler HTTP dispara runner nem roda teste: grava estado e responde `202`.
+
+Todos autenticam. O board e o runner assinam com HMAC-SHA256
+(`X-Hub-Signature-256`); o Grafana manda `Authorization: Bearer` ou `Basic`,
+configurado no contact point. Falha fechada: token não configurado significa
+webhook recusado, nunca aberto.
 
 ## Parar tudo
 
@@ -101,9 +108,11 @@ O agente roda no repositório monitorado, não aqui. Copie
 `.github/workflows/` do projeto monitorado e configure os secrets
 `CLAUDE_CODE_OAUTH_TOKEN` e `TRIAGE_WEBHOOK_SECRET`.
 
-O runner não tem credencial do board nem permissão de push: ele escreve
-`resultado.json` como artefato e encerra. Quem lê, verifica e publica é o
-orquestrador.
+O runner não tem credencial do board nem permissão de push. Ele busca o contexto
+em `GET /jobs/{jobId}/contexto` — card inteiro, comentários (inclusive a resposta
+humana que retomou a triagem) e o pacote de evidência, tudo já limpo e marcado
+como dado não-confiável —, escreve `resultado.json` como artefato e encerra. Quem
+lê, verifica e publica é o orquestrador.
 
 ## O que o gate verifica sozinho
 
@@ -127,6 +136,9 @@ mede o diff, checa a allowlist e classifica o blast radius.
 | Resultado e verificação executável | `feat/09-result-verification` | pronto |
 | Publicação da decisão | `feat/10-decision-publication` | pronto |
 | Métricas e documentação | `feat/11-metrics-docs` | pronto |
+| URI do pacote de evidência no PR | `feat/12-evidence-uri` | pronto |
+| Contexto do card e evidência para o runner | `feat/13-runner-context` | pronto |
+| Autenticação do webhook do Grafana | `feat/14-grafana-webhook-auth` | pronto |
 
 Fora do escopo desta implementação, por decisão da arquitetura: as regras de
 alerta do Grafana (artefato versionado à parte) e o dono do kill switch (§12.2).
