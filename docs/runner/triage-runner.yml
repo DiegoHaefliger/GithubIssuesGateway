@@ -55,9 +55,10 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: "*"
+          show_full_output: true
           claude_args: >-
             --allowedTools "Read,Write,Edit,Grep,Glob,Bash"
-            --max-turns 30
+            --max-turns 40
           prompt: |
             Você está em um runner isolado, sem credencial e sem rota para produção.
             Card: ${{ inputs.card }} · Fingerprint: ${{ inputs.fingerprint }}
@@ -94,6 +95,14 @@ jobs:
 
             Não comente no card, não abra pull request e não faça push: quem publica
             é o orquestrador, depois do Policy Gate.
+
+      - name: Publicar o raciocínio do agente como artefato
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: raciocinio-${{ inputs.job_id }}
+          path: ${{ runner.temp }}/claude-execution-output.json
+          if-no-files-found: warn
 
       - name: Publicar o resultado como artefato
         if: always()
