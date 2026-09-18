@@ -95,9 +95,10 @@ public class GitHubBoardClient implements BoardClient {
 
     @Override
     public void comentar(CardRef card, String comentario) {
+        String corpo = MARCADOR_COMENTARIO_ORQUESTRADOR + "\n" + comentario;
         restClient.post()
                 .uri("/repos/{owner}/{repo}/issues/{numero}/comments", owner(card.repositorio()), nome(card.repositorio()), card.numero())
-                .body(Map.of("body", comentario))
+                .body(Map.of("body", corpo))
                 .retrieve()
                 .toBodilessEntity();
     }

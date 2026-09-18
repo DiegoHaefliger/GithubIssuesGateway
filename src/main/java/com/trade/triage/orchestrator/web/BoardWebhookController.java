@@ -2,6 +2,7 @@ package com.trade.triage.orchestrator.web;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.trade.triage.board.BoardClient;
 import com.trade.triage.board.github.WebhookSignatureVerifier;
 import com.trade.triage.gateway.service.CardContentBuilder;
 import com.trade.triage.orchestrator.job.JobEnqueueOutcome;
@@ -115,6 +116,12 @@ public class BoardWebhookController {
         if (corpo.path("sender").path("type").asText("").equalsIgnoreCase("Bot")) {
             return ignorado("comentario do proprio bot");
         }
+        // TRIAGE_GITHUB_TOKEN e um PAT pessoal: sender.type nunca vem "Bot" para
+        // comentario postado pelo proprio orquestrador. Sem este marcador, a
+        // analise publicada retriagem a si mesma (loop).
+        if (texto(corpo, "comment", "body").contains(BoardClient.MARCADOR_COMENTARIO_ORQUESTRADOR)) {
+            return ignorado("comentario do proprio orquestrador");
+        }
         return jobService.enfileirar(cardRef(corpo), "issue_comment.created");
     }
 
@@ -137,6 +144,10 @@ public class BoardWebhookController {
 
     private String texto(JsonNode corpo, String campo) {
         return corpo.path(campo).asText("");
+    }
+
+    private String texto(JsonNode corpo, String campo, String subcampo) {
+        return corpo.path(campo).path(subcampo).asText("");
     }
 
     private JsonNode ler(String payload) {

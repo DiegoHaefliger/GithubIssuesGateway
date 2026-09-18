@@ -11,6 +11,14 @@ import java.util.List;
 
 public interface BoardClient {
 
+    /**
+     * Marca todo comentario postado pelo orquestrador. {@code sender.type == "Bot"}
+     * nao basta: {@code TRIAGE_GITHUB_TOKEN} e um PAT pessoal, entao o webhook
+     * ve o comentario do orquestrador como se fosse humano. Sem esse marcador,
+     * cada analise publicada dispara outro job nela mesma (loop).
+     */
+    String MARCADOR_COMENTARIO_ORQUESTRADOR = "<!-- triage-orquestrador: nao retriagem -->";
+
     CardRef criarCard(String repositorio, CardContent conteudo);
 
     CardSnapshot lerCard(CardRef card);

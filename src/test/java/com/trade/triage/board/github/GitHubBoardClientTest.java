@@ -1,5 +1,6 @@
 package com.trade.triage.board.github;
 
+import com.trade.triage.board.BoardClient;
 import com.trade.triage.board.model.CardContent;
 import com.trade.triage.board.model.CardRef;
 import com.trade.triage.board.model.PullRequestContent;
@@ -52,7 +53,8 @@ class GitHubBoardClientTest {
     void comentaNoCard() {
         server.expect(requestTo("https://api.github.com/repos/acme/trade/issues/123/comments"))
                 .andExpect(method(org.springframework.http.HttpMethod.POST))
-                .andExpect(jsonPath("$.body").value("recorrencia registrada"))
+                .andExpect(jsonPath("$.body").value(
+                        BoardClient.MARCADOR_COMENTARIO_ORQUESTRADOR + "\nrecorrencia registrada"))
                 .andRespond(withSuccess());
 
         client.comentar(new CardRef("acme/trade", 123), "recorrencia registrada");

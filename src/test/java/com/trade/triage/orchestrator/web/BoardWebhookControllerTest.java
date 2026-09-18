@@ -114,6 +114,26 @@ class BoardWebhookControllerTest {
     }
 
     @Test
+    void comentarioDoProprioOrquestradorNaoRetoma() throws Exception {
+        // TRIAGE_GITHUB_TOKEN e PAT pessoal: sender.type nunca vem "Bot" para a
+        // analise que o proprio orquestrador posta. So o marcador distingue.
+        String comentarioDoOrquestrador = """
+                {
+                  "action": "created",
+                  "issue": {"number": 123},
+                  "repository": {"full_name": "acme/trade"},
+                  "sender": {"type": "User"},
+                  "comment": {"body": "%s\\n## Analise do agente"}
+                }
+                """.formatted(com.trade.triage.board.BoardClient.MARCADOR_COMENTARIO_ORQUESTRADOR);
+
+        mockMvc.perform(webhook("issue_comment", comentarioDoOrquestrador))
+                .andExpect(status().isAccepted());
+
+        verify(jobService, never()).enfileirar(anyString(), anyString());
+    }
+
+    @Test
     void pullRequestMergedRegistraDesfecho() throws Exception {
         mockMvc.perform(webhook("pull_request", """
                         {
