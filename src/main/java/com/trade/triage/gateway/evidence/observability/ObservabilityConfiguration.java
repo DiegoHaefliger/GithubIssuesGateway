@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.DefaultUriBuilderFactory;
 
 import java.time.Duration;
 
@@ -24,6 +25,15 @@ public class ObservabilityConfiguration {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeout);
         requestFactory.setReadTimeout(timeout);
-        return RestClient.builder().baseUrl(baseUrl).requestFactory(requestFactory).build();
+
+        // VALUES_ONLY: LogQL/PromQL sempre tem "{"/"}", que o modo padrao confunde com template
+        DefaultUriBuilderFactory uriBuilderFactory = new DefaultUriBuilderFactory(baseUrl);
+        uriBuilderFactory.setEncodingMode(DefaultUriBuilderFactory.EncodingMode.VALUES_ONLY);
+
+        return RestClient.builder()
+                .baseUrl(baseUrl)
+                .uriBuilderFactory(uriBuilderFactory)
+                .requestFactory(requestFactory)
+                .build();
     }
 }
