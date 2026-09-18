@@ -23,7 +23,7 @@ permissions:
 jobs:
   triagem:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
@@ -58,7 +58,7 @@ jobs:
           show_full_output: true
           claude_args: >-
             --allowedTools "Read,Write,Edit,Grep,Glob,Bash"
-            --max-turns 40
+            --max-turns 75
           prompt: |
             Você está em um runner isolado, sem credencial e sem rota para produção.
             Card: ${{ inputs.card }} · Fingerprint: ${{ inputs.fingerprint }}
@@ -76,6 +76,12 @@ jobs:
             vez de tentar buscar mais dado.
 
             Escreva a análise em português correto, com acentuação.
+
+            Nunca rode build ou teste em background (sem "&", sem nohup, sem
+            checar arquivo/processo depois). Esta sessão é de execução única:
+            se você voltar depois pra checar um resultado assíncrono, a sessão
+            já terá terminado e o resultado.json nunca sai. Rode mvn/npm em
+            primeiro plano e espere o comando terminar antes de continuar.
 
             Produza a análise e, se houver hipótese sustentada, a correção e um teste
             que falhe sem o patch e passe com ele. Escreva o resultado em
