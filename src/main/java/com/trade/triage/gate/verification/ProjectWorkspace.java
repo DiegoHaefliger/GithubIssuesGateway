@@ -69,6 +69,9 @@ public class ProjectWorkspace implements AutoCloseable {
             CommandResult resultado = runner.run(
                     List.of("git", "apply", "--whitespace=nowarn", arquivo.toString()), raiz, TIMEOUT_DE_GIT);
             Files.deleteIfExists(arquivo);
+            if (!resultado.sucesso()) {
+                LOG.warn("git apply falhou codigoDeSaida={} saida={}", resultado.codigoDeSaida(), resultado.saida());
+            }
             return resultado.sucesso();
         } catch (IOException exception) {
             throw new VerificationException("Falha ao aplicar patch no worktree", exception);
