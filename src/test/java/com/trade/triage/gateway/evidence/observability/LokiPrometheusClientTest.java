@@ -19,6 +19,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.startsWith;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.header;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
@@ -69,15 +70,42 @@ class LokiPrometheusClientTest {
     }
 
     @Test
-    void logsPorServicoUsaServiceNameComoStreamSelectorEEnvComoMetadadoEstruturado() {
+    void logsPorServicoUsaServiceNameComoStreamSelectorEFiltraApenasErros() {
         lokiServer.expect(requestTo(startsWith("https://loki.exemplo/loki/api/v1/query_range")))
-                .andExpect(queryParamDecodificado("query", "{service_name=\"crypto-alerts-java\"} | env=\"producao\""))
+                .andExpect(queryParamDecodificado("query",
+                        "{service_name=\"crypto-alerts-java\"} | env=\"producao\" | severity_text=~\"ERROR|FATAL\""))
                 .andRespond(withSuccess("""
                         {"data": {"result": []}}
                         """, MediaType.APPLICATION_JSON));
 
         client.logsPorServico("crypto-alerts-java", "producao", Instant.EPOCH, Instant.EPOCH.plusSeconds(1));
 
+        lokiServer.verify();
+    }
+
+    @Test
+    void logsIncluemExcecaoEStacktraceDoStructuredMetadata() {
+        lokiServer.expect(requestTo(startsWith("https://loki.exemplo/loki/api/v1/query_range")))
+                .andExpect(header("X-Loki-Response-Encoding-Flags", "categorize-labels"))
+                .andRespond(withSuccess("""
+                        {"data": {"result": [{"stream": {"service_name": "crypto-alerts-java"}, "values": [
+                          ["1000000000", "HTTP Request to /notifications failed",
+                           {"structuredMetadata": {
+                             "exception_type": "java.lang.IllegalArgumentException",
+                             "exception_message": "Could not resolve attribute 'read'",
+                             "exception_stacktrace": "java.lang.IllegalArgumentException\\n\\tat X.y(X.java:1)"}}],
+                          ["2000000000", "linha sem metadado", {}]]}]}}
+                        """, MediaType.APPLICATION_JSON));
+
+        List<String> linhas = client.logsPorServico(
+                "crypto-alerts-java", "producao", Instant.EPOCH, Instant.EPOCH.plusSeconds(1));
+
+        assertThat(linhas).containsExactly(
+                "HTTP Request to /notifications failed\n"
+                        + "exception_type=java.lang.IllegalArgumentException\n"
+                        + "exception_message=Could not resolve attribute 'read'\n"
+                        + "exception_stacktrace=java.lang.IllegalArgumentException\n\tat X.y(X.java:1)",
+                "linha sem metadado");
         lokiServer.verify();
     }
 

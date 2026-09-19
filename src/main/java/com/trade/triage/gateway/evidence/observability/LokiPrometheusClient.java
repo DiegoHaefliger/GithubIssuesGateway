@@ -17,6 +17,8 @@ public class LokiPrometheusClient implements ObservabilityClient {
     private static final Logger LOG = LoggerFactory.getLogger(LokiPrometheusClient.class);
     private static final int LIMITE_DE_LINHAS = 200;
     private static final String PASSO_SERIE = "300s";
+    private static final String CABECALHO_CODIFICACAO = "X-Loki-Response-Encoding-Flags";
+    private static final String CATEGORIZAR_LABELS = "categorize-labels";
 
     private final RestClient loki;
     private final RestClient prometheus;
@@ -35,7 +37,8 @@ public class LokiPrometheusClient implements ObservabilityClient {
     @Override
     public List<String> logsPorServico(String service, String env, Instant inicio, Instant fim) {
         // service_name e' o label indexado; env e' structured metadata, filtra com "|"
-        return consultarLogs("{service_name=\"" + service + "\"} | env=\"" + env + "\"", inicio, fim);
+        return consultarLogs("{service_name=\"" + service + "\"} | env=\"" + env
+                + "\" | severity_text=~\"ERROR|FATAL\"", inicio, fim);
     }
 
     @Override
@@ -101,6 +104,7 @@ public class LokiPrometheusClient implements ObservabilityClient {
                             .queryParam("end", fim.toEpochMilli() * 1_000_000L)
                             .queryParam("limit", LIMITE_DE_LINHAS)
                             .build(consulta))
+                    .header(CABECALHO_CODIFICACAO, CATEGORIZAR_LABELS)
                     .retrieve()
                     .body(LokiStreamResponse.class);
             return resposta == null ? List.of() : resposta.linhas();
