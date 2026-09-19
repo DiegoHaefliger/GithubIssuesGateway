@@ -1,6 +1,7 @@
 package com.trade.triage.gateway.evidence;
 
 import com.trade.triage.gateway.evidence.observability.ObservabilityClient;
+import com.trade.triage.gateway.evidence.observability.TraceClient;
 import com.trade.triage.gateway.model.ErrorSignal;
 import com.trade.triage.gateway.scrub.LogLineScrubber;
 import com.trade.triage.gateway.scrub.SecretScrubber;
@@ -23,16 +24,18 @@ public class ScrubbedEvidenceCollector implements EvidenceCollector {
     private static final Duration JANELA_DEPLOYS = Duration.ofHours(24);
 
     private final ObservabilityClient observability;
+    private final TraceClient traces;
     private final CommitHistory commitHistory;
     private final DeploymentHistory deploymentHistory;
     private final SecretScrubber scrubber;
     private final LogLineScrubber logLineScrubber;
     private final Clock clock;
 
-    public ScrubbedEvidenceCollector(ObservabilityClient observability, CommitHistory commitHistory,
-                                     DeploymentHistory deploymentHistory, SecretScrubber scrubber,
-                                     LogLineScrubber logLineScrubber, Clock clock) {
+    public ScrubbedEvidenceCollector(ObservabilityClient observability, TraceClient traces,
+                                     CommitHistory commitHistory, DeploymentHistory deploymentHistory,
+                                     SecretScrubber scrubber, LogLineScrubber logLineScrubber, Clock clock) {
         this.observability = observability;
+        this.traces = traces;
         this.commitHistory = commitHistory;
         this.deploymentHistory = deploymentHistory;
         this.scrubber = scrubber;
@@ -46,14 +49,24 @@ public class ScrubbedEvidenceCollector implements EvidenceCollector {
         Instant inicio = momento.minus(JANELA_TRACE);
         Instant fim = momento.plus(JANELA_TRACE);
         List<String> lacunas = new ArrayList<>();
-        lacunas.add("trace distribuido indisponivel: Tempo nao esta implantado");
 
-        List<String> logsDoTrace = signal.traceIdOpcional()
-                .map(traceId -> observability.logsPorTrace(traceId, inicio, fim))
-                .orElseGet(() -> {
-                    lacunas.add("sem trace_id no log: evidencia degradada para janela do servico");
-                    return List.of();
-                });
+        List<String> logsDoTrace = List.of();
+        List<String> spansDoTrace = List.of();
+        if (signal.traceIdOpcional().isPresent()) {
+            String traceId = signal.traceId();
+            logsDoTrace = observability.logsPorTrace(traceId, inicio, fim);
+            spansDoTrace = traces.spansDoTrace(traceId);
+            if (spansDoTrace.isEmpty()) {
+                lacunas.add("trace " + traceId + " nao encontrado no Tempo, ou o Tempo nao respondeu");
+            }
+        } else {
+            lacunas.add("sem trace_id no log: evidencia degradada para janela do servico");
+        }
+
+        List<String> logsDoServico = observability.logsPorServico(signal.service(), signal.env(), inicio, fim);
+        if (logsDoServico.isEmpty()) {
+            lacunas.add("Loki nao devolveu log de erro do servico na janela: consulta falhou ou log ainda nao indexado");
+        }
 
         List<String> commits = commitHistory.commitsRecentes(projeto, JANELA_COMMITS);
         if (commits.isEmpty()) {
@@ -74,7 +87,8 @@ public class ScrubbedEvidenceCollector implements EvidenceCollector {
                 momento,
                 scrubber.scrubText(signal.stacktrace()),
                 limpar(logsDoTrace),
-                limpar(observability.logsPorServico(signal.service(), signal.env(), inicio, fim)),
+                spansDoTrace.stream().map(scrubber::scrubText).toList(),
+                limpar(logsDoServico),
                 observability.serieDeErros(signal.service(), signal.env(), momento.minus(JANELA_SERIE), fim),
                 observability.metricasDoServico(signal.service(), inicio, fim),
                 deploys,

@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.startsWith;
@@ -107,6 +108,40 @@ class LokiPrometheusClientTest {
                         + "exception_stacktrace=java.lang.IllegalArgumentException\n\tat X.y(X.java:1)",
                 "linha sem metadado");
         lokiServer.verify();
+    }
+
+    @Test
+    void ultimoErroFiltraPelaClasseDaExcecaoELeTraceStackERotaDoMetadado() {
+        lokiServer.expect(requestTo(startsWith("https://loki.exemplo/loki/api/v1/query_range")))
+                .andExpect(queryParamDecodificado("query",
+                        "{service_name=\"crypto-alerts-java\"} | env=\"producao\" | severity_text=~\"ERROR|FATAL\""
+                                + " | exception_type=\"java.lang.IllegalArgumentException\""))
+                .andExpect(queryParamDecodificado("limit", "1"))
+                .andRespond(withSuccess("""
+                        {"data": {"result": [{"values": [
+                          ["1000000000", "HTTP Request to /notifications failed",
+                           {"structuredMetadata": {"trace_id": "abc", "http_path": "/notifications",
+                             "exception_message": "Could not resolve attribute 'read'",
+                             "exception_stacktrace": "java.lang.IllegalArgumentException"}}]]}]}}
+                        """, MediaType.APPLICATION_JSON));
+
+        Optional<ErroRegistrado> erro = client.ultimoErro("crypto-alerts-java", "producao",
+                "java.lang.IllegalArgumentException", Instant.EPOCH, Instant.EPOCH.plusSeconds(1));
+
+        assertThat(erro).contains(new ErroRegistrado("abc", "Could not resolve attribute 'read'",
+                "java.lang.IllegalArgumentException", "/notifications"));
+        lokiServer.verify();
+    }
+
+    @Test
+    void ultimoErroSemMetadadoEstruturadoDevolveVazio() {
+        lokiServer.expect(requestTo(startsWith("https://loki.exemplo/loki/api/v1/query_range")))
+                .andRespond(withSuccess("""
+                        {"data": {"result": [{"values": [["1000000000", "linha crua"]]}]}}
+                        """, MediaType.APPLICATION_JSON));
+
+        assertThat(client.ultimoErro("crypto-alerts-java", "producao", null,
+                Instant.EPOCH, Instant.EPOCH.plusSeconds(1))).isEmpty();
     }
 
     @Test

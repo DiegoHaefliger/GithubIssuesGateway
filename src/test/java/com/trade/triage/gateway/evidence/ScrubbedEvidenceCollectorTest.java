@@ -1,6 +1,7 @@
 package com.trade.triage.gateway.evidence;
 
 import com.trade.triage.gateway.evidence.observability.ObservabilityClient;
+import com.trade.triage.gateway.evidence.observability.TraceClient;
 import com.trade.triage.gateway.model.ErrorSignal;
 import com.trade.triage.gateway.scrub.LogLineScrubber;
 import com.trade.triage.gateway.scrub.ScrubProperties;
@@ -40,6 +41,8 @@ class ScrubbedEvidenceCollectorTest {
     @Mock
     private ObservabilityClient observability;
     @Mock
+    private TraceClient traces;
+    @Mock
     private CommitHistory commitHistory;
     @Mock
     private DeploymentHistory deploymentHistory;
@@ -49,12 +52,13 @@ class ScrubbedEvidenceCollectorTest {
     @BeforeEach
     void setUp() {
         SecretScrubber scrubber = new SecretScrubber(new ScrubProperties(null, null));
-        collector = new ScrubbedEvidenceCollector(observability, commitHistory, deploymentHistory, scrubber,
+        collector = new ScrubbedEvidenceCollector(observability, traces, commitHistory, deploymentHistory, scrubber,
                 new LogLineScrubber(scrubber, new com.fasterxml.jackson.databind.ObjectMapper()),
                 Clock.fixed(AGORA, ZoneOffset.UTC));
         lenient().when(observability.logsPorServico(anyString(), anyString(), any(), any())).thenReturn(List.of());
         lenient().when(observability.serieDeErros(anyString(), anyString(), any(), any())).thenReturn(List.of());
         lenient().when(observability.metricasDoServico(anyString(), any(), any())).thenReturn(Map.of());
+        lenient().when(traces.spansDoTrace(anyString())).thenReturn(List.of("span"));
         lenient().when(commitHistory.commitsRecentes(any(), any())).thenReturn(List.of("abc123 alguem fix"));
         lenient().when(deploymentHistory.deploysRecentes(any(), anyString(), any()))
                 .thenReturn(List.of("52709a0 master em 2026-09-17T09:00:00Z"));
@@ -83,12 +87,31 @@ class ScrubbedEvidenceCollectorTest {
     }
 
     @Test
-    void registraLacunaDeTraceDistribuidoSempre() {
+    void trazSpansDoTempoQuandoHaTraceId() {
         when(observability.logsPorTrace(anyString(), any(), any())).thenReturn(List.of());
+        when(traces.spansDoTrace("t1")).thenReturn(List.of("GET /notifications | http.route=/notifications"));
 
         EvidencePackage pacote = collector.collect(sinal("t1"), projeto, "f1");
 
-        assertThat(pacote.lacunas()).anyMatch(lacuna -> lacuna.contains("Tempo nao esta implantado"));
+        assertThat(pacote.spansDoTrace()).containsExactly("GET /notifications | http.route=/notifications");
+        assertThat(pacote.lacunas()).noneMatch(lacuna -> lacuna.contains("Tempo"));
+    }
+
+    @Test
+    void traceAusenteNoTempoViraLacuna() {
+        when(observability.logsPorTrace(anyString(), any(), any())).thenReturn(List.of());
+        when(traces.spansDoTrace("t1")).thenReturn(List.of());
+
+        EvidencePackage pacote = collector.collect(sinal("t1"), projeto, "f1");
+
+        assertThat(pacote.lacunas()).anyMatch(lacuna -> lacuna.contains("nao encontrado no Tempo"));
+    }
+
+    @Test
+    void lokiSemLogDeErroViraLacuna() {
+        EvidencePackage pacote = collector.collect(sinal(null), projeto, "f1");
+
+        assertThat(pacote.lacunas()).anyMatch(lacuna -> lacuna.contains("Loki nao devolveu"));
     }
 
     @Test

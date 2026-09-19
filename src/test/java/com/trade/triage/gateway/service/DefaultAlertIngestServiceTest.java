@@ -6,6 +6,8 @@ import com.trade.triage.board.model.CardRef;
 import com.trade.triage.gateway.evidence.EvidenceCollector;
 import com.trade.triage.gateway.evidence.EvidencePackage;
 import com.trade.triage.gateway.evidence.EvidenceStore;
+import com.trade.triage.gateway.evidence.observability.ErroRegistrado;
+import com.trade.triage.gateway.evidence.observability.ObservabilityClient;
 import com.trade.triage.gateway.fingerprint.FingerprintCalculator;
 import com.trade.triage.gateway.fingerprint.MessageNormalizer;
 import com.trade.triage.gateway.fingerprint.StackFrameSelector;
@@ -41,6 +43,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -73,6 +76,8 @@ class DefaultAlertIngestServiceTest {
     private CardRateLimiter rateLimiter;
     @Mock
     private TriageMetrics metrics;
+    @Mock
+    private ObservabilityClient observability;
 
     private DefaultAlertIngestService service;
 
@@ -84,6 +89,7 @@ class DefaultAlertIngestServiceTest {
                 registry,
                 new FingerprintCalculator(new MessageNormalizer(), new StackFrameSelector()),
                 new ErrorSignalExtractor(clock),
+                new ErrorSignalEnricher(observability, new StackFrameSelector(), clock),
                 evidenceCollector,
                 evidenceStore,
                 new CardContentBuilder(scrubber),
@@ -94,6 +100,40 @@ class DefaultAlertIngestServiceTest {
                 new IncidentWindow(new IncidentWindowProperties("build/nao-existe")),
                 metrics,
                 clock);
+        lenient().when(observability.ultimoErro(any(), any(), any(), any(), any())).thenReturn(Optional.empty());
+    }
+
+    @Test
+    void alertaVolumetricoGanhaStackMensagemETraceDoLogIndividual() {
+        registraProjeto();
+        when(observability.ultimoErro(any(), any(), any(), any(), any())).thenReturn(Optional.of(new ErroRegistrado(
+                "trace-real", "Could not resolve attribute 'read'", STACK, "/notifications")));
+        when(repository.findById(anyString())).thenReturn(Optional.empty());
+        when(rateLimiter.estourouTeto(projeto)).thenReturn(false);
+        when(evidenceStore.store(any())).thenReturn("file:///var/evidencia/p1.json");
+        when(board.criarCard(anyString(), any())).thenReturn(new CardRef("acme/trade", 123));
+        ArgumentCaptor<com.trade.triage.gateway.model.ErrorSignal> sinal =
+                ArgumentCaptor.forClass(com.trade.triage.gateway.model.ErrorSignal.class);
+        when(evidenceCollector.collect(sinal.capture(), any(), anyString())).thenReturn(evidencia());
+
+        service.ingest(webhook(new GrafanaAlert("firing",
+                Map.of("service", "trade-backend", "env", "producao", "severity", "critical", "rule_id", "regra-1"),
+                Map.of("exception_class", "java.lang.NullPointerException",
+                        "stacktrace", "Stacktrace individual nao disponivel nesta regra volumetrica",
+                        "message", "3 ocorrencia(s) de NullPointerException"),
+                AGORA, null)));
+
+        assertThat(sinal.getValue().traceId()).isEqualTo("trace-real");
+        assertThat(sinal.getValue().message()).isEqualTo("Could not resolve attribute 'read'");
+        assertThat(sinal.getValue().stacktrace()).isEqualTo(STACK);
+        assertThat(sinal.getValue().localizacao())
+                .isEqualTo("com.trade.execution.ExitReasonResolver.resolve(88)");
+        ArgumentCaptor<CardContent> card = ArgumentCaptor.forClass(CardContent.class);
+        verify(board).criarCard(anyString(), card.capture());
+        assertThat(card.getValue().corpo())
+                .contains("Projeto: `trade`")
+                .contains("Trace: `trace-real`")
+                .contains("ExitReasonResolver.resolve(88)");
     }
 
     @Test
@@ -234,7 +274,9 @@ class DefaultAlertIngestServiceTest {
     void killSwitchAcionadoSuprimeTudo() {
         DefaultAlertIngestService desligado = new DefaultAlertIngestService(
                 registry, new FingerprintCalculator(new MessageNormalizer(), new StackFrameSelector()),
-                new ErrorSignalExtractor(Clock.fixed(AGORA, ZoneOffset.UTC)), evidenceCollector, evidenceStore,
+                new ErrorSignalExtractor(Clock.fixed(AGORA, ZoneOffset.UTC)),
+                new ErrorSignalEnricher(observability, new StackFrameSelector(), Clock.fixed(AGORA, ZoneOffset.UTC)),
+                evidenceCollector, evidenceStore,
                 new CardContentBuilder(new SecretScrubber(new ScrubProperties(null, null))), rateLimiter,
                 repository, board, new KillSwitch(new KillSwitchProperties("build/nao-existe", true)),
                 new IncidentWindow(new IncidentWindowProperties("build/nao-existe")),
@@ -284,7 +326,7 @@ class DefaultAlertIngestServiceTest {
 
     private EvidencePackage evidencia() {
         return new EvidencePackage("p1", "f1", "trade-backend", "producao", AGORA, STACK,
-                List.of(), List.of(), List.of(), Map.of(), List.of(), List.of(), null, List.of());
+                List.of(), List.of(), List.of(), List.of(), Map.of(), List.of(), List.of(), null, List.of());
     }
 
     private GrafanaWebhookRequest webhook(GrafanaAlert alerta) {

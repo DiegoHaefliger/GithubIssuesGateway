@@ -168,6 +168,6 @@ class DefaultJobContextServiceTest {
     private EvidencePackage evidencia() {
         return new EvidencePackage("p1", "f1", "trade-backend", "producao", AGORA,
                 "at com.trade.execution.ExitReasonResolver.resolve(ExitReasonResolver.java:88)",
-                List.of(), List.of(), List.of(), Map.of(), List.of(), List.of(), null, List.of());
+                List.of(), List.of(), List.of(), List.of(), Map.of(), List.of(), List.of(), null, List.of());
     }
 }

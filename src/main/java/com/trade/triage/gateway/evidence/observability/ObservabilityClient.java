@@ -5,12 +5,15 @@ import com.trade.triage.gateway.evidence.OccurrenceSample;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public interface ObservabilityClient {
 
     List<String> logsPorTrace(String traceId, Instant inicio, Instant fim);
 
     List<String> logsPorServico(String service, String env, Instant inicio, Instant fim);
+
+    Optional<ErroRegistrado> ultimoErro(String service, String env, String exceptionClass, Instant inicio, Instant fim);
 
     List<OccurrenceSample> serieDeErros(String service, String env, Instant inicio, Instant fim);
 

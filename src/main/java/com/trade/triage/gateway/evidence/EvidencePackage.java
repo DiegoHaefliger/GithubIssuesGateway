@@ -12,6 +12,7 @@ public record EvidencePackage(
         Instant occurredAt,
         String stacktrace,
         List<String> logsDoTrace,
+        List<String> spansDoTrace,
         List<String> logsDoServico,
         List<OccurrenceSample> serieDeOcorrencias,
         Map<String, String> metricas,
@@ -22,6 +23,7 @@ public record EvidencePackage(
 
     public EvidencePackage {
         logsDoTrace = logsDoTrace == null ? List.of() : List.copyOf(logsDoTrace);
+        spansDoTrace = spansDoTrace == null ? List.of() : List.copyOf(spansDoTrace);
         logsDoServico = logsDoServico == null ? List.of() : List.copyOf(logsDoServico);
         serieDeOcorrencias = serieDeOcorrencias == null ? List.of() : List.copyOf(serieDeOcorrencias);
         metricas = metricas == null ? Map.of() : Map.copyOf(metricas);

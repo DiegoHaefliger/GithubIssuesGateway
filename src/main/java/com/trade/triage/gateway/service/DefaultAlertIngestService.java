@@ -35,6 +35,7 @@ public class DefaultAlertIngestService implements AlertIngestService {
     private final ProjectRegistry registry;
     private final FingerprintCalculator fingerprintCalculator;
     private final ErrorSignalExtractor extractor;
+    private final ErrorSignalEnricher enricher;
     private final EvidenceCollector evidenceCollector;
     private final EvidenceStore evidenceStore;
     private final CardContentBuilder cardBuilder;
@@ -49,6 +50,7 @@ public class DefaultAlertIngestService implements AlertIngestService {
     public DefaultAlertIngestService(ProjectRegistry registry,
                                      FingerprintCalculator fingerprintCalculator,
                                      ErrorSignalExtractor extractor,
+                                     ErrorSignalEnricher enricher,
                                      EvidenceCollector evidenceCollector,
                                      EvidenceStore evidenceStore,
                                      CardContentBuilder cardBuilder,
@@ -62,6 +64,7 @@ public class DefaultAlertIngestService implements AlertIngestService {
         this.registry = registry;
         this.fingerprintCalculator = fingerprintCalculator;
         this.extractor = extractor;
+        this.enricher = enricher;
         this.evidenceCollector = evidenceCollector;
         this.evidenceStore = evidenceStore;
         this.cardBuilder = cardBuilder;
@@ -102,7 +105,7 @@ public class DefaultAlertIngestService implements AlertIngestService {
             return IngestResult.de(IngestOutcome.LOG_ORFAO,
                     "service " + signal.service() + " fora do registro de escopo");
         }
-        return processar(signal, projeto.get());
+        return processar(enricher.enriquecer(signal, projeto.get()), projeto.get());
     }
 
     private IngestResult processar(ErrorSignal signal, ProjectEntry projeto) {
@@ -177,7 +180,7 @@ public class DefaultAlertIngestService implements AlertIngestService {
         estado.vincularEvidencia(evidenciaUri);
 
         CardRef card = board.criarCard(projeto.board(),
-                cardBuilder.build(signal, estado, evidencia, evidenciaUri));
+                cardBuilder.build(signal, projeto, estado, evidencia, evidenciaUri));
         estado.vincularCard(card.asString());
         repository.save(estado);
 

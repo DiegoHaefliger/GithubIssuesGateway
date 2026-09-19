@@ -21,6 +21,11 @@ public class ObservabilityConfiguration {
         return construir(properties.prometheusUrl(), properties.timeout());
     }
 
+    @Bean
+    public RestClient tempoRestClient(ObservabilityProperties properties) {
+        return construir(properties.tempoUrl(), properties.timeout());
+    }
+
     private RestClient construir(String baseUrl, Duration timeout) {
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(timeout);

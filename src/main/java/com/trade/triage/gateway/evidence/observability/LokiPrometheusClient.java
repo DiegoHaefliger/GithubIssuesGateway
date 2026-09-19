@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Component
 public class LokiPrometheusClient implements ObservabilityClient {
@@ -31,14 +32,31 @@ public class LokiPrometheusClient implements ObservabilityClient {
     @Override
     public List<String> logsPorTrace(String traceId, Instant inicio, Instant fim) {
         // trace_id e' structured metadata, nao label; sem "| json" (log ja chega estruturado via OTLP)
-        return consultarLogs("{service_name=~\".+\"} | trace_id=\"" + traceId + "\"", inicio, fim);
+        return consultarLogs("{service_name=~\".+\"} | trace_id=\"" + traceId + "\"", inicio, fim, LIMITE_DE_LINHAS)
+                .map(LokiStreamResponse::linhas)
+                .orElse(List.of());
     }
 
     @Override
     public List<String> logsPorServico(String service, String env, Instant inicio, Instant fim) {
         // service_name e' o label indexado; env e' structured metadata, filtra com "|"
-        return consultarLogs("{service_name=\"" + service + "\"} | env=\"" + env
-                + "\" | severity_text=~\"ERROR|FATAL\"", inicio, fim);
+        return consultarLogs(errosDoServico(service, env), inicio, fim, LIMITE_DE_LINHAS)
+                .map(LokiStreamResponse::linhas)
+                .orElse(List.of());
+    }
+
+    @Override
+    public Optional<ErroRegistrado> ultimoErro(String service, String env, String exceptionClass,
+                                               Instant inicio, Instant fim) {
+        String consulta = errosDoServico(service, env)
+                + (exceptionClass == null || exceptionClass.isBlank() ? "" : " | exception_type=\"" + exceptionClass + "\"");
+        return consultarLogs(consulta, inicio, fim, 1)
+                .flatMap(LokiStreamResponse::primeiroMetadado)
+                .map(ErroRegistrado::de);
+    }
+
+    private String errosDoServico(String service, String env) {
+        return "{service_name=\"" + service + "\"} | env=\"" + env + "\" | severity_text=~\"ERROR|FATAL\"";
     }
 
     @Override
@@ -94,23 +112,22 @@ public class LokiPrometheusClient implements ObservabilityClient {
         }
     }
 
-    private List<String> consultarLogs(String consulta, Instant inicio, Instant fim) {
+    private Optional<LokiStreamResponse> consultarLogs(String consulta, Instant inicio, Instant fim, int limite) {
         try {
             // "{query}" + build(consulta): evita UriBuilder confundir "{"/"}" do LogQL com template
-            LokiStreamResponse resposta = loki.get()
+            return Optional.ofNullable(loki.get()
                     .uri(builder -> builder.path("/loki/api/v1/query_range")
                             .queryParam("query", "{query}")
                             .queryParam("start", inicio.toEpochMilli() * 1_000_000L)
                             .queryParam("end", fim.toEpochMilli() * 1_000_000L)
-                            .queryParam("limit", LIMITE_DE_LINHAS)
+                            .queryParam("limit", limite)
                             .build(consulta))
                     .header(CABECALHO_CODIFICACAO, CATEGORIZAR_LABELS)
                     .retrieve()
-                    .body(LokiStreamResponse.class);
-            return resposta == null ? List.of() : resposta.linhas();
+                    .body(LokiStreamResponse.class));
         } catch (RuntimeException exception) {
             LOG.warn("falha ao consultar logs motivo={}", exception.getMessage());
-            return List.of();
+            return Optional.empty();
         }
     }
 }
