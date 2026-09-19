@@ -98,6 +98,24 @@ class DecisionTablePolicyGateTest {
 
         assertThat(decisao.decisao()).isEqualTo(Decision.PROPOSE_PATCH);
         assertThat(decisao.regraDecisora()).isEqualTo("clausula 9");
+        assertThat(decisao.detalhe())
+                .contains("severity=critical")
+                .contains("Passou nas clausulas 1 a 8")
+                .contains("teste reproduz=sim");
+    }
+
+    @Test
+    void diffGrandeDetalhaTamanhoELimite() {
+        GateDecision decisao = gateComAutoFix.decidir(elegivel().comLinhas(51).build(), projeto);
+
+        assertThat(decisao.detalhe()).contains("51 linha(s)").contains("limite do projeto: 50");
+    }
+
+    @Test
+    void primeiraClausulaNaoDizQuePassouEmNenhumaAnterior() {
+        GateDecision decisao = gateComAutoFix.decidir(elegivel().comIncidente(true).build(), projeto);
+
+        assertThat(decisao.detalhe()).contains("Nenhuma clausula anterior avaliada");
     }
 
     @Test

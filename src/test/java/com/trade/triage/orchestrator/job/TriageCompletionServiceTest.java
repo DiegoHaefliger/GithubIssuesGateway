@@ -103,7 +103,7 @@ class TriageCompletionServiceTest {
         when(resultReader.read(job)).thenReturn(resultado(true));
         when(verifier.verificar(any(), any(), any(), anyInt())).thenReturn(fatos());
         when(gate.decidir(any(), any())).thenReturn(
-                new GateDecision(Decision.HUMAN, "clausula 3", "area critica"));
+                new GateDecision(Decision.HUMAN, "clausula 3", "area critica", "detalhe"));
 
         service.concluir("job-1");
 
@@ -120,7 +120,7 @@ class TriageCompletionServiceTest {
         when(resultReader.read(job)).thenReturn(resultado(true));
         when(verifier.verificar(any(), any(), any(), anyInt())).thenReturn(fatos());
         when(gate.decidir(any(), any())).thenReturn(
-                new GateDecision(Decision.HUMAN, "clausula 6", "nao existe teste que reproduza o erro"));
+                new GateDecision(Decision.HUMAN, "clausula 6", "nao existe teste que reproduza o erro", "detalhe"));
 
         service.concluir("job-1");
 
@@ -139,7 +139,7 @@ class TriageCompletionServiceTest {
         when(resultReader.read(job)).thenReturn(resultado(true));
         when(verifier.verificar(any(), any(), any(), anyInt())).thenReturn(fatos());
         when(gate.decidir(any(), any())).thenReturn(
-                new GateDecision(Decision.PROPOSE_PATCH, "clausula 9", "severidade critica"));
+                new GateDecision(Decision.PROPOSE_PATCH, "clausula 9", "severidade critica", "detalhe"));
         when(decisionRepository.save(any())).thenAnswer(invocacao -> invocacao.getArgument(0));
         when(patchPublisher.publicarBranch(any(), any(), any(), any(), any())).thenReturn("triagem/f1");
         when(board.abrirPullRequest(eq("acme/trade"), any()))
@@ -160,7 +160,7 @@ class TriageCompletionServiceTest {
         when(resultReader.read(job)).thenReturn(resultado(true));
         when(verifier.verificar(any(), any(), any(), anyInt())).thenReturn(fatos());
         when(gate.decidir(any(), any())).thenReturn(
-                new GateDecision(Decision.AUTO_FIX, "clausula 10", "caso elegivel"));
+                new GateDecision(Decision.AUTO_FIX, "clausula 10", "caso elegivel", "detalhe"));
         when(decisionRepository.save(any())).thenAnswer(invocacao -> invocacao.getArgument(0));
         when(patchPublisher.publicarBranch(any(), any(), any(), any(), any())).thenReturn("triagem/f1");
         when(board.abrirPullRequest(eq("acme/trade"), any()))
@@ -180,7 +180,7 @@ class TriageCompletionServiceTest {
         when(resultReader.read(job)).thenReturn(resultado(true));
         when(verifier.verificar(any(), any(), any(), anyInt())).thenReturn(fatos());
         when(gate.decidir(any(), any())).thenReturn(
-                new GateDecision(Decision.PROPOSE_PATCH, "clausula 9", "severidade critica"));
+                new GateDecision(Decision.PROPOSE_PATCH, "clausula 9", "severidade critica", "detalhe"));
         when(decisionRepository.save(any())).thenAnswer(invocacao -> invocacao.getArgument(0));
         when(patchPublisher.publicarBranch(any(), any(), any(), any(), any())).thenReturn("triagem/f1");
         when(board.abrirPullRequest(eq("acme/trade"), any()))
@@ -198,7 +198,7 @@ class TriageCompletionServiceTest {
         when(resultReader.read(job)).thenReturn(resultado(true));
         when(verifier.verificar(any(), any(), any(), anyInt())).thenReturn(fatos());
         when(gate.decidir(any(), any())).thenReturn(
-                new GateDecision(Decision.AUTO_FIX, "clausula 10", "caso elegivel"));
+                new GateDecision(Decision.AUTO_FIX, "clausula 10", "caso elegivel", "detalhe"));
         when(decisionRepository.save(any())).thenAnswer(invocacao -> invocacao.getArgument(0));
         when(patchPublisher.publicarBranch(any(), any(), any(), any(), any())).thenReturn("triagem/f1");
         when(board.abrirPullRequest(eq("acme/trade"), any()))
@@ -219,7 +219,7 @@ class TriageCompletionServiceTest {
         when(resultReader.read(job)).thenReturn(resultado(false));
         when(verifier.verificar(any(), any(), any(), anyInt())).thenReturn(fatos());
         when(gate.decidir(any(), any())).thenReturn(
-                new GateDecision(Decision.PROPOSE_PATCH, "clausula 9", "severidade critica"));
+                new GateDecision(Decision.PROPOSE_PATCH, "clausula 9", "severidade critica", "detalhe"));
         when(decisionRepository.save(any())).thenAnswer(invocacao -> invocacao.getArgument(0));
 
         service.concluir("job-1");
@@ -249,7 +249,7 @@ class TriageCompletionServiceTest {
         when(resultReader.read(job)).thenReturn(resultado(true));
         when(verifier.verificar(any(), any(), any(), anyInt())).thenReturn(fatos());
         when(gate.decidir(any(), any())).thenReturn(
-                new GateDecision(Decision.HUMAN, "clausula 4", "fora da allowlist"));
+                new GateDecision(Decision.HUMAN, "clausula 4", "fora da allowlist", "detalhe"));
         when(decisionRepository.save(any())).thenAnswer(invocacao -> invocacao.getArgument(0));
 
         service.concluir("job-1");

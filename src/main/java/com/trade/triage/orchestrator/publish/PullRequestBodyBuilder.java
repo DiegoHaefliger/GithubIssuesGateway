@@ -33,6 +33,8 @@ public class PullRequestBodyBuilder {
                 ## Decisao do gate
                 %s — %s (%s). Blast radius: %s.
 
+                %s
+
                 ## Reverter
                 `git revert <sha>`
 
@@ -52,6 +54,7 @@ public class PullRequestBodyBuilder {
                 decisao.explicacao(),
                 decisao.regraDecisora(),
                 fatos.blastRadius(),
+                decisao.detalhe(),
                 textoOuAusente(evidenciaUri));
     }
 

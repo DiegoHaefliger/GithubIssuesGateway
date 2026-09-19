@@ -25,6 +25,8 @@ public class AnalysisCommentBuilder {
                 **Por que parou aqui**
                 %s (%s)
 
+                %s
+
                 **A pergunta que destrava**
                 %s
                 """.formatted(
@@ -33,6 +35,7 @@ public class AnalysisCommentBuilder {
                 lista(resultado.evidenciaContra()),
                 decisao.explicacao(),
                 decisao.regraDecisora(),
+                decisao.detalhe(),
                 pergunta(resultado));
     }
 

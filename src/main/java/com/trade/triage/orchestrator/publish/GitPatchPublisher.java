@@ -24,6 +24,9 @@ public class GitPatchPublisher implements PatchPublisher {
 
     private static final Duration TIMEOUT_DE_GIT = Duration.ofMinutes(5);
     private static final String PREFIXO_DA_BRANCH = "triagem/";
+    // O container nao tem ~/.gitconfig; sem identidade explicita o git commit aborta.
+    private static final String AUTOR_NOME = "triage-gateway";
+    private static final String AUTOR_EMAIL = "triage-gateway@users.noreply.github.com";
 
     private final CommandRunner runner;
     private final VerificationProperties properties;
@@ -59,7 +62,8 @@ public class GitPatchPublisher implements PatchPublisher {
                 throw new VerificationException("Patch aprovado pelo gate nao aplica na branch " + branch);
             }
             executar(worktree, List.of("git", "add", "--all"), "preparar arquivos");
-            executar(worktree, List.of("git", "commit", "-m",
+            executar(worktree, List.of("git", "-c", "user.name=" + AUTOR_NOME,
+                    "-c", "user.email=" + AUTOR_EMAIL, "commit", "-m",
                     commitMessageBuilder.build(job, resultado, decisao, blastRadius)), "commitar");
             executar(worktree, List.of("git", "push", origem, branch, "--force-with-lease"),
                     "publicar branch no repositorio remoto");
