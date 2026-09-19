@@ -151,6 +151,7 @@ class TriageCompletionServiceTest {
         assertThat(estado.getAutoAttempts()).isEqualTo(1);
         assertThat(estado.getState()).isEqualTo(FingerprintState.EM_CORRECAO);
         verify(board).aplicarLabel(CARD, "decisao/proposta");
+        verify(board).aplicarLabel(new CardRef("acme/trade", 77), "aberto-por/agente-e-triage-gateway");
     }
 
     @Test

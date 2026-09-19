@@ -39,6 +39,7 @@ public class TriageCompletionService {
 
     private static final Logger LOG = LoggerFactory.getLogger(TriageCompletionService.class);
     private static final String LABEL_AGUARDANDO_HUMANO = "aguardando-humano";
+    private static final String LABEL_ORIGEM_DO_PR = "aberto-por/agente-e-triage-gateway";
 
     private final TriageJobRepository jobRepository;
     private final FingerprintRepository fingerprintRepository;
@@ -129,6 +130,7 @@ public class TriageCompletionService {
                 branch,
                 projeto.branchBase()));
 
+        board.aplicarLabel(new CardRef(pullRequest.repositorio(), pullRequest.numero()), LABEL_ORIGEM_DO_PR);
         registro.registrarPr(pullRequest.asString());
         decisionRepository.save(registro);
         board.comentar(card, "PR aberto pela triagem: " + pullRequest.url());
