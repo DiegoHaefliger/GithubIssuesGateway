@@ -37,13 +37,15 @@ public class ProjectWorkspace implements AutoCloseable {
      */
     public static ProjectWorkspace clonar(
             ProjectEntry projeto, String origemDeClone, Path diretorioBase, CommandRunner runner) {
+        // git roda com cwd proprio; caminho relativo ao JVM resolveria contra o cwd errado.
+        Path base = diretorioBase.toAbsolutePath();
         try {
-            Files.createDirectories(diretorioBase);
-            Path destino = Files.createTempDirectory(diretorioBase, projeto.projeto() + "-");
+            Files.createDirectories(base);
+            Path destino = Files.createTempDirectory(base, projeto.projeto() + "-");
             CommandResult clone = runner.run(
                     List.of("git", "clone", "--depth", "1", "--branch", projeto.branchBase(),
                             origemDeClone, destino.toString()),
-                    diretorioBase, TIMEOUT_DE_GIT);
+                    base, TIMEOUT_DE_GIT);
             if (!clone.sucesso()) {
                 throw new VerificationException(
                         "Falha ao clonar " + projeto.repositorio() + ": " + semCredencial(clone.saida()));

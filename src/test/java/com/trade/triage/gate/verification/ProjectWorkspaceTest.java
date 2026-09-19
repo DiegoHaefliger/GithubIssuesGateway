@@ -10,9 +10,12 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -22,6 +25,16 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ProjectWorkspaceTest {
+
+    private static final Duration TIMEOUT = Duration.ofSeconds(30);
+    private static final String PATCH_NOVO_ARQUIVO = """
+            diff --git a/Novo.java b/Novo.java
+            new file mode 100644
+            --- /dev/null
+            +++ b/Novo.java
+            @@ -0,0 +1 @@
+            +x
+            """;
 
     private static final String ORIGEM = "https://x-access-token:ghp_segredo@github.com/acme/trade.git";
 
@@ -49,6 +62,24 @@ class ProjectWorkspaceTest {
         List<String> comando = captor.getValue();
         assertThat(comando).contains("--depth", "1", "--branch", "master", ORIGEM);
         assertThat(comando).doesNotContain("--local", "--no-hardlinks");
+    }
+
+    @Test
+    void diretorioBaseRelativoClonaEAplicaPatchDentroDaWorktree(@TempDir Path origem) throws Exception {
+        CommandRunner git = new CommandRunner();
+        git.run(List.of("git", "init", "-q", "-b", "master"), origem, TIMEOUT);
+        Files.writeString(origem.resolve("README.md"), "a\n");
+        git.run(List.of("git", "add", "."), origem, TIMEOUT);
+        git.run(List.of("git", "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init"),
+                origem, TIMEOUT);
+        Path relativo = Path.of("target", "worktrees-teste-" + UUID.randomUUID());
+
+        try (ProjectWorkspace worktree = ProjectWorkspace.clonar(
+                projeto, origem.toUri().toString(), relativo, git)) {
+            assertThat(worktree.raiz().resolve("README.md")).exists();
+            assertThat(worktree.aplicar(PATCH_NOVO_ARQUIVO)).isTrue();
+            assertThat(worktree.raiz().resolve("Novo.java")).hasContent("x");
+        }
     }
 
     @Test
