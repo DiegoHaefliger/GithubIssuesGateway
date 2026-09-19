@@ -13,14 +13,20 @@ import com.trade.triage.shared.control.IncidentWindowProperties;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.invocation.InvocationOnMock;
+import org.mockito.stubbing.Answer;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.Duration;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class GateFactsVerifierTest {
@@ -115,6 +121,60 @@ class GateFactsVerifierTest {
 
         assertThat(comIncidente.verificar(resultado(DIFF_SOMENTE_FONTE, null), projeto, "warning", 0)
                 .incidenteAtivo()).isTrue();
+    }
+
+    @Test
+    void suiteVermelhaSemCorrecaoEVerdeComCorrecaoReproduzEPassa() {
+        prepararSuite(new CommandResult(1, "FAIL"), new CommandResult(0, "OK"));
+
+        GateFacts fatos = verifier().verificar(resultadoComTeste(), projeto, "warning", 0);
+
+        assertThat(fatos.testeReproduzOErro()).isTrue();
+        assertThat(fatos.suiteCompletaPassa()).isTrue();
+    }
+
+    @Test
+    void suiteQueFalhaComCorrecaoAindaReproduzMasNaoPassa() {
+        prepararSuite(new CommandResult(1, "FAIL"), new CommandResult(1, "FAIL"));
+
+        GateFacts fatos = verifier().verificar(resultadoComTeste(), projeto, "warning", 0);
+
+        assertThat(fatos.testeReproduzOErro()).isTrue();
+        assertThat(fatos.suiteCompletaPassa()).isFalse();
+    }
+
+    @Test
+    void suiteVerdeSemCorrecaoNaoReproduz() {
+        prepararSuite(new CommandResult(0, "OK"), new CommandResult(0, "OK"));
+
+        GateFacts fatos = verifier().verificar(resultadoComTeste(), projeto, "warning", 0);
+
+        assertThat(fatos.testeReproduzOErro()).isFalse();
+    }
+
+    private void prepararSuite(CommandResult semCorrecao, CommandResult comCorrecao) {
+        when(cloneUrls.de(projeto)).thenReturn("https://example.invalid/acme/trade.git");
+        when(commandRunner.run(anyList(), any(), any())).thenAnswer(new Answer<CommandResult>() {
+            private final Iterator<CommandResult> suites = List.of(semCorrecao, comCorrecao).iterator();
+
+            @Override
+            public CommandResult answer(InvocationOnMock invocacao) {
+                List<String> comando = invocacao.getArgument(0);
+                return "git".equals(comando.get(0)) ? new CommandResult(0, "") : suites.next();
+            }
+        });
+    }
+
+    private TriageResult resultadoComTeste() {
+        String diff = DIFF_SOMENTE_FONTE + """
+                diff --git a/src/test/java/com/trade/parser/CandleTest.java b/src/test/java/com/trade/parser/CandleTest.java
+                --- a/src/test/java/com/trade/parser/CandleTest.java
+                +++ b/src/test/java/com/trade/parser/CandleTest.java
+                @@ -1,1 +1,1 @@
+                -a
+                +b
+                """;
+        return resultado(diff, new ProposedTest("src/test/java/com/trade/parser/CandleTest.java", "x"));
     }
 
     private GateFactsVerifier verifier() {

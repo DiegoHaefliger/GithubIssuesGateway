@@ -25,12 +25,7 @@ public class CommandRunner {
             Process processo = new ProcessBuilder(comando)
                     .directory(diretorio.toFile())
                     .redirectErrorStream(true)
-                    .start();
-            // Le em thread separada, drenando o pipe continuamente ate o processo
-            // fechar o stdout — se ninguem le, o processo enche o buffer do pipe do
-            // SO e trava escrevendo. mvn test deste projeto passa de mil linhas de
-            // saida; limit(200) sozinho parava de ler e travava o processo ate o
-            // timeout de 20min, nas duas fases (vermelho e verde) do gate.
+                    .start();           
             CompletableFuture<String> saidaFuture = CompletableFuture.supplyAsync(() -> lerSaida(processo));
             boolean terminou = processo.waitFor(timeout.toSeconds(), TimeUnit.SECONDS);
             if (!terminou) {

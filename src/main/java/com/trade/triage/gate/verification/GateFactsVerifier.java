@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -19,6 +20,8 @@ import java.util.regex.Pattern;
 public class GateFactsVerifier {
 
     private static final Logger LOG = LoggerFactory.getLogger(GateFactsVerifier.class);
+
+    private static final int LINHAS_DE_SAIDA_NO_LOG = 40;
 
     private static final List<Pattern> AREAS_PROIBIDAS = List.of(
             Pattern.compile("(?i).*/(db|database)/migration/.*"),
@@ -82,20 +85,34 @@ public class GateFactsVerifier {
             return new TestOutcome(false, false);
         }
 
+        String card = resultado.cardRef();
         try (ProjectWorkspace worktree = ProjectWorkspace.clonar(
                 projeto, cloneUrls.de(projeto), Path.of(properties.diretorioDeTrabalho()), commandRunner)) {
             if (!worktree.aplicar(diffDoTeste)) {
+                LOG.warn("git apply do teste falhou card={}", card);
                 return new TestOutcome(false, false);
             }
-            boolean vermelhoSemCorrecao = !worktree
-                    .rodarSuite(projeto.comandoDeTeste(), properties.timeoutDaSuite()).sucesso();
+            CommandResult semCorrecao = worktree.rodarSuite(projeto.comandoDeTeste(), properties.timeoutDaSuite());
+            registrar("suite sem correcao", card, semCorrecao);
             if (!worktree.aplicar(diffDaCorrecao)) {
-                return new TestOutcome(vermelhoSemCorrecao, false);
+                LOG.warn("git apply da correcao falhou card={}", card);
+                return new TestOutcome(!semCorrecao.sucesso(), false);
             }
-            boolean verdeComCorrecao = worktree
-                    .rodarSuite(projeto.comandoDeTeste(), properties.timeoutDaSuite()).sucesso();
-            return new TestOutcome(vermelhoSemCorrecao && verdeComCorrecao, verdeComCorrecao);
+            CommandResult comCorrecao = worktree.rodarSuite(projeto.comandoDeTeste(), properties.timeoutDaSuite());
+            registrar("suite com correcao", card, comCorrecao);
+            return new TestOutcome(!semCorrecao.sucesso(), comCorrecao.sucesso());
         }
+    }
+
+    private void registrar(String etapa, String card, CommandResult resultado) {
+        LOG.info("{} card={} codigoDeSaida={}{}", etapa, card, resultado.codigoDeSaida(),
+                resultado.sucesso() ? "" : "\n" + ultimasLinhas(resultado.saida()));
+    }
+
+    private String ultimasLinhas(String saida) {
+        String[] linhas = saida.split("\n");
+        int inicio = Math.max(0, linhas.length - LINHAS_DE_SAIDA_NO_LOG);
+        return String.join("\n", Arrays.copyOfRange(linhas, inicio, linhas.length));
     }
 
     private BlastRadius blastRadiusMaisSevero(ProjectEntry projeto, List<String> caminhos) {
