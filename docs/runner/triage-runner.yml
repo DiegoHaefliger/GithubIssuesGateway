@@ -59,9 +59,11 @@ jobs:
 
       # O agente so' roda teste offline e focado; build frio passa do timeout do Bash
       # e o Claude Code joga o comando pra background, matando a sessao headless.
+      # quarkus.build.skip: o goal `build` empacota o app na fase package e o agente
+      # nunca chega la' — so' precisa do kernel no ~/.m2 e dos testes ja' compilados.
       - name: Preparar o build do backend
         working-directory: backend
-        run: mvn -B -q -DskipTests install
+        run: mvn -B -ntp -DskipTests -Dquarkus.build.skip=true -Dspotless.check.skip=true -Dcheckstyle.skip=true install
 
       - name: Rodar o agente
         uses: anthropics/claude-code-action@v1
