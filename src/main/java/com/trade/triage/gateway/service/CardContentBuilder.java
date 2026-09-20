@@ -10,6 +10,9 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 public class CardContentBuilder {
@@ -20,6 +23,7 @@ public class CardContentBuilder {
     private static final int LINHAS_DE_CABECALHO_DO_STACK = 8;
     private static final int FRAMES_DO_PROJETO_NO_CARD = 10;
     private static final String PREFIXO_DE_FRAME = "at ";
+    private static final Pattern BLOCO_DE_FREQUENCIA = Pattern.compile("(?s)(## Frequencia\\R).*?(\\R\\R##)");
 
     private final SecretScrubber scrubber;
 
@@ -85,6 +89,27 @@ public class CardContentBuilder {
                 textoOuTraco(signal.exceptionClass()));
     }
 
+    /** Recorrencia reescreve o bloco de frequencia do proprio card; comentario novo a cada ocorrencia vira ruido. */
+    public Optional<String> corpoComFrequenciaAtualizada(String corpoAtual, FingerprintEntity estado) {
+        if (corpoAtual == null || corpoAtual.isBlank()) {
+            return Optional.empty();
+        }
+        Matcher bloco = BLOCO_DE_FREQUENCIA.matcher(corpoAtual);
+        if (!bloco.find()) {
+            return Optional.empty();
+        }
+        String atualizado = bloco.group(1) + frequencia(estado) + bloco.group(2);
+        return Optional.of(bloco.replaceFirst(Matcher.quoteReplacement(atualizado)));
+    }
+
+    private String frequencia(FingerprintEntity estado) {
+        return """
+                - Ocorrencias: %d
+                - Primeira: %s
+                - Ultima: %s""".formatted(
+                estado.getOccurrenceCount(), estado.getFirstSeen(), estado.getLastSeen());
+    }
+
     public String comentarioDeRecorrencia(FingerprintEntity estado) {
         return """
                 Recorrencia registrada.
@@ -121,9 +146,7 @@ public class CardContentBuilder {
                 - Regra: `%s`
 
                 ## Frequencia
-                - Ocorrencias: %d
-                - Primeira: %s
-                - Ultima: %s
+                %s
 
                 ## Sintoma
                 - Excecao: `%s`
@@ -160,9 +183,7 @@ public class CardContentBuilder {
                 signal.env(),
                 textoOuTraco(signal.severity()),
                 textoOuTraco(signal.ruleId()),
-                estado.getOccurrenceCount(),
-                estado.getFirstSeen(),
-                estado.getLastSeen(),
+                frequencia(estado),
                 textoOuTraco(signal.exceptionClass()),
                 textoOuTraco(signal.localizacao()),
                 scrubber.scrubText(textoOuTraco(signal.message())),

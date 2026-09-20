@@ -29,6 +29,8 @@ public interface BoardClient {
 
     void comentar(CardRef card, String comentario);
 
+    void atualizarCorpo(CardRef card, String corpo);
+
     void aplicarLabel(CardRef card, String label);
 
     void removerLabel(CardRef card, String label);

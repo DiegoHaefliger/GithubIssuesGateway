@@ -3,6 +3,7 @@ package com.trade.triage.gateway.service;
 import com.trade.triage.board.BoardClient;
 import com.trade.triage.board.model.CardContent;
 import com.trade.triage.board.model.CardRef;
+import com.trade.triage.board.model.CardSnapshot;
 import com.trade.triage.gateway.evidence.EvidenceCollector;
 import com.trade.triage.gateway.evidence.EvidencePackage;
 import com.trade.triage.gateway.evidence.EvidenceStore;
@@ -43,6 +44,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -52,6 +54,18 @@ import static org.mockito.Mockito.when;
 class DefaultAlertIngestServiceTest {
 
     private static final Instant AGORA = Instant.parse("2026-09-17T12:00:00Z");
+    private static final String CORPO_DO_CARD = """
+            ## Identidade
+            - Fingerprint: `f1`
+
+            ## Frequencia
+            - Ocorrencias: 1
+            - Primeira: 2026-09-17T11:00:00Z
+            - Ultima: 2026-09-17T11:00:00Z
+
+            ## Sintoma
+            - Excecao: `java.lang.NullPointerException`
+            """;
     private static final String STACK = """
             java.lang.NullPointerException: exitReason is null
                 at com.trade.execution.ExitReasonResolver.resolve(ExitReasonResolver.java:88)
@@ -184,10 +198,11 @@ class DefaultAlertIngestServiceTest {
     }
 
     @Test
-    void recorrenciaComentaNoCardSemCriarOutro() {
+    void recorrenciaReescreveAFrequenciaDoCardSemComentarNemCriarOutro() {
         registraProjeto();
         FingerprintEntity existente = existente(FingerprintState.TRIADO);
         when(repository.findById(anyString())).thenReturn(Optional.of(existente));
+        when(board.lerCard(any())).thenReturn(new CardSnapshot("titulo", CORPO_DO_CARD, "open"));
 
         List<IngestResult> resultados = service.ingest(webhook(alerta("Falha ao fechar posicao 99")));
 
@@ -195,8 +210,27 @@ class DefaultAlertIngestServiceTest {
                 .extracting(IngestResult::resultado)
                 .isEqualTo(IngestOutcome.DEDUPLICADO);
         assertThat(existente.getOccurrenceCount()).isEqualTo(2);
-        verify(board).comentar(any(), anyString());
+        ArgumentCaptor<String> corpo = ArgumentCaptor.forClass(String.class);
+        verify(board).atualizarCorpo(eq(new CardRef("acme/trade", 123)), corpo.capture());
+        assertThat(corpo.getValue())
+                .contains("- Ocorrencias: 2")
+                .contains("- Ultima: " + existente.getLastSeen())
+                .contains("## Sintoma")
+                .contains("- Excecao: `java.lang.NullPointerException`");
+        verify(board, never()).comentar(any(), anyString());
         verify(board, never()).criarCard(anyString(), any());
+    }
+
+    @Test
+    void cardSemBlocoDeFrequenciaVoltaAComentar() {
+        registraProjeto();
+        when(repository.findById(anyString())).thenReturn(Optional.of(existente(FingerprintState.TRIADO)));
+        when(board.lerCard(any())).thenReturn(new CardSnapshot("titulo", "corpo escrito a mao", "open"));
+
+        service.ingest(webhook(alerta("Falha ao fechar posicao 99")));
+
+        verify(board).comentar(any(), anyString());
+        verify(board, never()).atualizarCorpo(any(), anyString());
     }
 
     @Test
@@ -204,6 +238,7 @@ class DefaultAlertIngestServiceTest {
         registraProjeto();
         FingerprintEntity existente = existente(FingerprintState.RESOLVIDO);
         when(repository.findById(anyString())).thenReturn(Optional.of(existente));
+        when(board.lerCard(any())).thenReturn(new CardSnapshot("titulo", CORPO_DO_CARD, "open"));
 
         List<IngestResult> resultados = service.ingest(webhook(alerta("Falha ao fechar posicao 99")));
 

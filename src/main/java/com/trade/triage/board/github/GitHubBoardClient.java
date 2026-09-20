@@ -104,6 +104,15 @@ public class GitHubBoardClient implements BoardClient {
     }
 
     @Override
+    public void atualizarCorpo(CardRef card, String corpo) {
+        restClient.patch()
+                .uri("/repos/{owner}/{repo}/issues/{numero}", owner(card.repositorio()), nome(card.repositorio()), card.numero())
+                .body(Map.of("body", corpo))
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    @Override
     public void aplicarLabel(CardRef card, String label) {
         restClient.post()
                 .uri("/repos/{owner}/{repo}/issues/{numero}/labels", owner(card.repositorio()), nome(card.repositorio()), card.numero())

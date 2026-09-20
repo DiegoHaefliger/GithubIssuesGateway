@@ -133,14 +133,21 @@ public class DefaultAlertIngestService implements AlertIngestService {
             return IngestResult.comCard(IngestOutcome.DEDUPLICADO, estado.getFingerprint(), null);
         }
         CardRef card = CardRef.parse(estado.getCardRef());
+        atualizarFrequencia(card, estado);
         if (regressao) {
             board.reabrir(card);
             board.aplicarLabel(card, LABEL_REGRESSAO);
             board.comentar(card, cardBuilder.comentarioDeRegressao(estado));
             return IngestResult.comCard(IngestOutcome.REGRESSAO_REABERTA, estado.getFingerprint(), card.asString());
         }
-        board.comentar(card, cardBuilder.comentarioDeRecorrencia(estado));
         return IngestResult.comCard(IngestOutcome.DEDUPLICADO, estado.getFingerprint(), card.asString());
+    }
+
+    private void atualizarFrequencia(CardRef card, FingerprintEntity estado) {
+        cardBuilder.corpoComFrequenciaAtualizada(board.lerCard(card).corpo(), estado)
+                .ifPresentOrElse(
+                        corpo -> board.atualizarCorpo(card, corpo),
+                        () -> board.comentar(card, cardBuilder.comentarioDeRecorrencia(estado)));
     }
 
     private IngestResult agregarNaTempestade(ErrorSignal signal, ProjectEntry projeto) {
