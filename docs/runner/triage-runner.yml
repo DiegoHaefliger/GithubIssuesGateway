@@ -50,8 +50,25 @@ jobs:
           path: triagem-in/contexto.json
           if-no-files-found: warn
 
+      - name: Configurar JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: "21"
+          distribution: "temurin"
+          cache: "maven"
+
+      # O agente so' roda teste offline e focado; build frio passa do timeout do Bash
+      # e o Claude Code joga o comando pra background, matando a sessao headless.
+      - name: Preparar o build do backend
+        working-directory: backend
+        run: mvn -B -q -DskipTests install
+
       - name: Rodar o agente
         uses: anthropics/claude-code-action@v1
+        env:
+          BASH_DEFAULT_TIMEOUT_MS: "900000"
+          BASH_MAX_TIMEOUT_MS: "1800000"
+          CLAUDE_CODE_DISABLE_BACKGROUND_TASKS: "1"
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           allowed_bots: "*"
@@ -83,6 +100,18 @@ jobs:
             se você voltar depois pra checar um resultado assíncrono, a sessão
             já terá terminado e o resultado.json nunca sai. Rode mvn/npm em
             primeiro plano e espere o comando terminar antes de continuar.
+
+            Ambiente já pronto: JDK 21 no PATH e o backend inteiro já compilado e
+            instalado no ~/.m2 (kernel incluído). Não instale nada, não compile o
+            kernel e não suba Docker nem Postgres: não há banco no runner. Rode só o
+            teste focado, offline, dentro de backend/:
+
+                mvn -B -o -q -pl app test -Dtest=NomeDaClasseDeTeste
+
+            O teste novo tem de ser unitário (sem @QuarkusTest, sem banco): mock do
+            que for externo, ou Hibernate isolado em memória. Se um comando falhar
+            por ambiente, não insista: escreva o resultado com o diff mesmo assim e
+            registre em evidencia_contra que o teste não pôde ser executado.
 
             Não delegue a subagente nem a busca em segundo plano. Faça a busca
             você mesmo com Read, Grep e Glob. Nunca termine a resposta dizendo
