@@ -63,7 +63,7 @@ jobs:
       # nunca chega la' — so' precisa do kernel no ~/.m2 e dos testes ja' compilados.
       - name: Preparar o build do backend
         working-directory: backend
-        run: mvn -B -ntp -DskipTests -Dquarkus.build.skip=true -Dspotless.check.skip=true -Dcheckstyle.skip=true install
+        run: mvn -B -ntp -DskipTests -Dquarkus.build.skip=true -Dspotless.check.skip=true -Dcheckstyle.skip=true -Ddependency-check.skip=true -Dodc.skip=true install
 
       - name: Rodar o agente
         uses: anthropics/claude-code-action@v1
