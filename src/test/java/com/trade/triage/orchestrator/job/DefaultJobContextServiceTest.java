@@ -35,6 +35,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -131,6 +132,21 @@ class DefaultJobContextServiceTest {
         ArgumentCaptor<TriageJobEntity> captor = ArgumentCaptor.forClass(TriageJobEntity.class);
         verify(jobRepository).save(captor.capture());
         assertThat(captor.getValue().getRunnerRunId()).isEqualTo(4242L);
+    }
+
+    @Test
+    void comentaOLinkDoRunNoCardQuandoARunComeca() {
+        prepararJob(JobState.EXECUTANDO);
+        when(board.lerCard(CARD)).thenReturn(new CardSnapshot("t", "c", "open"));
+        when(board.lerComentarios(CARD)).thenReturn(List.of());
+
+        service.contextoDe("job-1", 4242L);
+
+        ArgumentCaptor<String> comentario = ArgumentCaptor.forClass(String.class);
+        verify(board).comentar(eq(CARD), comentario.capture());
+        assertThat(comentario.getValue())
+                .contains("https://github.com/acme/trade/actions/runs/4242")
+                .contains("job-1");
     }
 
     @Test

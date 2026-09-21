@@ -23,6 +23,15 @@ public class DecisionTablePolicyGate implements PolicyGate {
                     (fatos, projeto) -> fatos.autoAttempts() >= 1,
                     (fatos, projeto) -> "Este fingerprint ja teve " + fatos.autoAttempts()
                             + " tentativa(s) automatica(s); a segunda vai sempre para humano."),
+            // Sem arquivo no diff nao ha o que medir: o blast radius cai no default CRITICO e a
+            // clausula 3 reprovava toda triagem que concluiu "nao ha o que corrigir", em loop.
+            // Numero fora da sequencia de proposito: renumerar mudaria o sentido dos registros ja
+            // gravados em decision_record e da tag de metrica.
+            new Clausula("2b", Decision.HUMAN, "a triagem nao propos correcao",
+                    (fatos, projeto) -> fatos.semProposta(),
+                    (fatos, projeto) -> "O agente nao propos diff: nao ha patch para avaliar nem para"
+                            + " aplicar. O card vai para humano decidir se fecha (bug ja corrigido ou"
+                            + " nao reproduz) ou se pede nova triagem com mais evidencia."),
             new Clausula("3", Decision.HUMAN, "diff toca area de blast radius CRITICO",
                     (fatos, projeto) -> fatos.blastRadius() == BlastRadius.CRITICO,
                     (fatos, projeto) -> "Arquivos do diff: " + arquivos(fatos)
@@ -83,10 +92,12 @@ public class DecisionTablePolicyGate implements PolicyGate {
     }
 
     private String resumo(Clausula decisora, GateFacts fatos, ProjectEntry projeto) {
-        int anteriores = clausulas.indexOf(decisora);
-        String passou = anteriores == 0 ? "Nenhuma clausula anterior avaliada."
-                : "Passou nas clausulas 1 a " + anteriores + ".";
-        return passou + " Fatos avaliados: incidente ativo=" + sim(fatos.incidenteAtivo())
+        List<Clausula> anteriores = clausulas.subList(0, clausulas.indexOf(decisora));
+        String passou = anteriores.isEmpty() ? "Nenhuma clausula anterior avaliada."
+                : "Passou nas clausulas " + anteriores.stream().map(Clausula::numero)
+                        .collect(java.util.stream.Collectors.joining(", ")) + ".";
+        return passou + " Fatos avaliados: sem proposta=" + sim(fatos.semProposta())
+                + ", incidente ativo=" + sim(fatos.incidenteAtivo())
                 + ", tentativas automaticas=" + fatos.autoAttempts()
                 + ", blast radius=" + fatos.blastRadius()
                 + ", tudo na allowlist=" + sim(fatos.todosNaAllowlist())

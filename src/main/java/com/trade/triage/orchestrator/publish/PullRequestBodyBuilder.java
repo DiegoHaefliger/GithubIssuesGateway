@@ -1,5 +1,6 @@
 package com.trade.triage.orchestrator.publish;
 
+import com.trade.triage.board.model.CardRef;
 import com.trade.triage.gate.GateDecision;
 import com.trade.triage.gate.GateFacts;
 import com.trade.triage.orchestrator.result.TriageResult;
@@ -18,7 +19,7 @@ public class PullRequestBodyBuilder {
     private static final Pattern FIM_DE_FRASE = Pattern.compile("(?<=[.!?])\\s");
 
     public String build(TriageResult resultado, GateDecision decisao, GateFacts fatos,
-                        FingerprintEntity estado, String evidenciaUri) {
+                        FingerprintEntity estado, String repositorioDoPullRequest, String evidenciaUri) {
         return """
                 ## Origem
                 Closes %s
@@ -49,7 +50,7 @@ public class PullRequestBodyBuilder {
                 ---
                 PR gerado por triagem automatizada. Evidencia completa: %s
                 """.formatted(
-                estado.getCardRef(),
+                referenciaDeFechamento(estado.getCardRef(), repositorioDoPullRequest),
                 estado.getCardRef(),
                 estado.getFingerprint(),
                 estado.getService(),
@@ -81,6 +82,14 @@ public class PullRequestBodyBuilder {
         int ultimoEspaco = cortado.lastIndexOf(' ');
         return (ultimoEspaco > PREFIXO_DO_TITULO.length() ? cortado.substring(0, ultimoEspaco) : cortado).strip()
                 + RETICENCIAS;
+    }
+
+    // GitHub so vincula o card em "Development" com a forma curta #numero; owner/repo#numero nao entra no painel.
+    private String referenciaDeFechamento(String cardRef, String repositorioDoPullRequest) {
+        CardRef card = CardRef.parse(cardRef);
+        return card.repositorio().equalsIgnoreCase(repositorioDoPullRequest)
+                ? "#" + card.numero()
+                : card.asString();
     }
 
     private String textoOuAusente(String evidenciaUri) {

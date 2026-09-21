@@ -46,9 +46,25 @@ class PullRequestBodyBuilderTest {
 
         String corpo = builder.build(resultado("x"),
                 new GateDecision(Decision.PROPOSE_PATCH, "clausula 9", "severidade critica", "detalhe"),
-                fatos, estado, null);
+                fatos, estado, "acme/trade", null);
 
-        assertThat(corpo).contains("Closes acme/trade#105");
+        assertThat(corpo).contains("Closes #105");
+        assertThat(corpo).contains("Card: acme/trade#105");
+    }
+
+    @Test
+    void corpoMantemReferenciaLongaQuandoOCardEstaEmOutroRepositorio() {
+        FingerprintEntity estado = new FingerprintEntity(
+                "f1", "crypto-alerts-java", "producao", "trade", "r1", "critical", Instant.EPOCH);
+        estado.vincularCard("acme/board#105");
+        GateFacts fatos = new GateFacts(List.of("A.java"), 2, true, true, true, false, BlastRadius.BAIXO,
+                "critical", false, 0);
+
+        String corpo = builder.build(resultado("x"),
+                new GateDecision(Decision.PROPOSE_PATCH, "clausula 9", "severidade critica", "detalhe"),
+                fatos, estado, "acme/trade", null);
+
+        assertThat(corpo).contains("Closes acme/board#105");
     }
 
     private TriageResult resultado(String justificativa) {

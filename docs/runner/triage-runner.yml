@@ -1,4 +1,5 @@
 name: triage-runner
+run-name: "triage ${{ inputs.card }} · job ${{ inputs.job_id }}"
 
 on:
   workflow_dispatch:
@@ -26,7 +27,24 @@ jobs:
     timeout-minutes: 45
 
     steps:
+      - name: Registrar o card no resumo do run
+        env:
+          CARD: ${{ inputs.card }}
+        run: |
+          repositorio="${CARD%#*}"
+          numero="${CARD##*#}"
+          {
+            echo "## Triagem de ${CARD}"
+            echo ""
+            echo "- Card: https://github.com/${repositorio}/issues/${numero}"
+            echo "- Job: \`${{ inputs.job_id }}\`"
+            echo "- Fingerprint: \`${{ inputs.fingerprint }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Preparar diretorios
         run: mkdir -p triagem-out triagem-in
@@ -57,13 +75,16 @@ jobs:
           distribution: "temurin"
           cache: "maven"
 
-      # O agente so' roda teste offline e focado; build frio passa do timeout do Bash
-      # e o Claude Code joga o comando pra background, matando a sessao headless.
-      # quarkus.build.skip: o goal `build` empacota o app na fase package e o agente
-      # nunca chega la' — so' precisa do kernel no ~/.m2 e dos testes ja' compilados.
+
       - name: Preparar o build do backend
         working-directory: backend
         run: mvn -B -ntp -DskipTests -Dquarkus.build.skip=true -Dspotless.check.skip=true -Dcheckstyle.skip=true -Ddependency-check.skip=true -Dodc.skip=true install
+
+      - name: Deixar o provider do surefire no cache offline
+        working-directory: backend
+        run: |
+          versao=$(mvn -B -q -N help:evaluate -Dexpression=surefire.version -DforceStdout)
+          mvn -B -ntp dependency:get -Dartifact=org.apache.maven.surefire:surefire-junit-platform:"$versao"
 
       - name: Rodar o agente
         uses: anthropics/claude-code-action@v1

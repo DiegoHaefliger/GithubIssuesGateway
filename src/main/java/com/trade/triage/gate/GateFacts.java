@@ -24,4 +24,8 @@ public record GateFacts(
     public int arquivosDoDiff() {
         return arquivosTocados.size();
     }
+
+    public boolean semProposta() {
+        return arquivosTocados.isEmpty();
+    }
 }

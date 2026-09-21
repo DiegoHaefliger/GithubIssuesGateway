@@ -53,7 +53,8 @@ public class DefaultJobContextService implements JobContextService {
         if (job.getState() != JobState.EXECUTANDO) {
             throw new UnauthorizedException("Job " + jobId + " nao esta em execucao");
         }
-        if (runId != null) {
+        boolean execucaoNova = runId != null && !runId.equals(job.getRunnerRunId());
+        if (execucaoNova) {
             job.registrarExecucaoDoRunner(runId);
             jobRepository.save(job);
         }
@@ -64,6 +65,11 @@ public class DefaultJobContextService implements JobContextService {
 
         CardRef card = CardRef.parse(job.getCardRef());
         CardSnapshot conteudo = board.lerCard(card);
+        List<ComentarioDoCard> comentarios = comentarios(card);
+        if (execucaoNova) {
+            board.comentar(card, "Triagem automatica em execucao: %s/actions/runs/%d (job `%s`)"
+                    .formatted(urlDoRepositorio(projeto.repositorio()), runId, job.getJobId()));
+        }
 
         return new JobContextResponse(
                 job.getJobId(),
@@ -74,8 +80,12 @@ public class DefaultJobContextService implements JobContextService {
                 JobContextResponse.AVISO_DE_CONTEUDO_HOSTIL,
                 scrubber.scrubText(conteudo.titulo()),
                 scrubber.scrubText(conteudo.corpo()),
-                comentarios(card),
+                comentarios,
                 evidenceStore.load(estado.getEvidenciaUri()).orElse(null));
+    }
+
+    private String urlDoRepositorio(String repositorio) {
+        return "https://github.com/" + repositorio;
     }
 
     private List<ComentarioDoCard> comentarios(CardRef card) {

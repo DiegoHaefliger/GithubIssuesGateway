@@ -38,6 +38,16 @@ class DecisionTablePolicyGateTest {
     }
 
     @Test
+    void triagemSemDiffParaNaClausulaPropriaEmVezDeBlastRadius() {
+        GateDecision decisao = gateComAutoFix.decidir(
+                elegivel().comArquivos(List.of()).comBlastRadius(BlastRadius.CRITICO).build(), projeto);
+
+        assertThat(decisao.decisao()).isEqualTo(Decision.HUMAN);
+        assertThat(decisao.regraDecisora()).isEqualTo("clausula 2b");
+        assertThat(decisao.detalhe()).contains("nao propos diff").doesNotContain("blast radius CRITICO");
+    }
+
+    @Test
     void areaCriticaSempreVaiParaHumano() {
         GateDecision decisao = gateComAutoFix.decidir(
                 elegivel().comBlastRadius(BlastRadius.CRITICO).build(), projeto);
@@ -100,7 +110,7 @@ class DecisionTablePolicyGateTest {
         assertThat(decisao.regraDecisora()).isEqualTo("clausula 9");
         assertThat(decisao.detalhe())
                 .contains("severity=critical")
-                .contains("Passou nas clausulas 1 a 8")
+                .contains("Passou nas clausulas 1, 2, 2b, 3, 4, 5, 6, 7, 8")
                 .contains("teste reproduz=sim");
     }
 
