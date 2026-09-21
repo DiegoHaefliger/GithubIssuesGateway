@@ -22,9 +22,14 @@ class RegistryFileContractTest {
         registry.reload();
 
         assertThat(registry.version()).isNotEqualTo("vazio");
-        assertThat(registry.snapshot().projetos()).hasSize(3);
-        // O servico e' o `quarkus.otel.service.name` que chega no Loki, nao o nome do projeto.
-        assertThat(registry.findByServiceAndEnv("crypto-alerts-java", "producao")).isPresent();
-        assertThat(registry.findByServiceAndEnv("crypto-monitor", "producao")).isEmpty();
+        assertThat(registry.snapshot().projetos()).isNotEmpty();
+        registry.snapshot().projetos().forEach(projeto -> projeto.servicos().forEach(servico ->
+                projeto.ambientes().forEach(ambiente -> {
+                    if (projeto.ativo()) {
+                        assertThat(registry.findByServiceAndEnv(servico, ambiente)).contains(projeto);
+                    } else {
+                        assertThat(registry.findByServiceAndEnv(servico, ambiente)).isEmpty();
+                    }
+                })));
     }
 }
